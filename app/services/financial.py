@@ -3,13 +3,21 @@ import defusedxml.ElementTree as ET
 import requests
 from app.config import settings
 
-# Şebeke bağlantı hat maliyeti (USD/km)
-# <10km: 34kV, 10-50km: 154kV, >50km: 380kV
+# Şebeke bağlantı hat maliyeti (USD/km) — TEİAŞ Türkiye referans verileri
 _GRID_COST_PER_KM = {
-    "34kv":  55_000,
-    "154kv": 200_000,
-    "380kv": 450_000,
+    "34kv":  60_000,   # OG bağlantı
+    "154kv": 220_000,  # YG bağlantı
+    "380kv": 480_000,  # ÇYG bağlantı
 }
+
+# Voltaj seviyesi kurulu güce (MW) göre — TEİAŞ standardı
+# <5MW: 34kV, 5-50MW: 154kV, >50MW: 380kV
+def _grid_voltage(total_mw: float) -> str:
+    if total_mw < 5:
+        return "34kv"
+    if total_mw <= 50:
+        return "154kv"
+    return "380kv"
 
 # İnşaat lojistik parametreleri
 _TRUCK_TRIPS_PER_MW    = 12     # TIR sayısı/MW (panel, çelik, beton, kablo)
@@ -30,16 +38,8 @@ def get_usd_tl() -> float:
     return 38.0
 
 
-def _grid_voltage(grid_km: float) -> str:
-    if grid_km < 10:
-        return "34kv"
-    if grid_km < 50:
-        return "154kv"
-    return "380kv"
-
-
 def _grid_connection_cost_usd(grid_km: float, total_mw: float) -> dict:
-    voltage = _grid_voltage(grid_km)
+    voltage = _grid_voltage(total_mw)
     cost_per_km = _GRID_COST_PER_KM[voltage]
     # Trafo merkezi maliyeti (MW başına)
     substation_usd = total_mw * 25_000

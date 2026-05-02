@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     tcmb_url: str = "https://www.tcmb.gov.tr/kurlar/today.xml"
 
     kwh_price_tl: float = 4.20
-    investment_per_mw_usd: float = 900_000
+    # YEKA GES-2024 Türkiye referansı: $1.26-1.4M/MW — orta değer kullanıldı
+    investment_per_mw_usd: float = 1_100_000
     performance_ratio: float = 0.80
 
     # Solar kaynakları
