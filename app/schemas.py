@@ -77,14 +77,20 @@ class LogisticsCost(BaseModel):
 
 
 class FinancialResult(BaseModel):
+    country_code:         str
+    country_name:         str
     usd_tl:               float
+    epc_per_mw_usd:       float
     base_investment_usd:  float
     grid_connection:      GridConnectionCost
     logistics:            LogisticsCost
     total_investment_usd: float
     total_investment_tl:  float
     annual_revenue_tl:    float
+    financing_rate:       float
     payback_years:        float
+    irr_estimate:         float
+    grid_reliability:     float
 
 
 class AnalysisResult(BaseModel):
