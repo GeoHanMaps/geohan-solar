@@ -25,8 +25,6 @@ rasterstats>=0.19.0
 # Solar modelling
 pvlib>=0.11.0
 
-# Terrain
-richdem>=0.3.4
 
 # Optimizasyon (MCDA ağırlık kalibrasyonu)
 scipy>=1.13.0
