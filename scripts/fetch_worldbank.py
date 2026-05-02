@@ -26,10 +26,10 @@ def fetch_solar_projects() -> list[dict]:
     rows = 100
     start = 0
 
-    # Birden fazla sektor filtresi dene
-    sector_filters = ["RE - Solar", "Solar", "Renewable Energy"]
+    # searchStr parametresi ile geniş arama, sonra filtrele
+    search_terms = ["solar photovoltaic", "solar energy project", "photovoltaic"]
 
-    for sector in sector_filters:
+    for term in search_terms:
         start = 0
         while True:
             resp = requests.get(
@@ -38,7 +38,7 @@ def fetch_solar_projects() -> list[dict]:
                     "format": "json",
                     "rows": rows,
                     "start": start,
-                    "sector_exact": sector,
+                    "searchStr": term,
                     "fl": "id,project_name,countryname,country_code,totalamt,boardapprovaldate,closingdate,sector1,status",
                 },
                 headers=WB_HEADERS,
@@ -46,11 +46,10 @@ def fetch_solar_projects() -> list[dict]:
             )
 
             if resp.status_code != 200:
-                print(f"  Sektör '{sector}': HTTP {resp.status_code}")
+                print(f"  '{term}': HTTP {resp.status_code}")
                 break
 
             data = resp.json()
-            # API bazen dict, bazen list döner
             raw = data.get("projects", {})
             if isinstance(raw, dict):
                 items = list(raw.values())
@@ -60,16 +59,22 @@ def fetch_solar_projects() -> list[dict]:
                 items = []
 
             if not items:
-                print(f"  Sektör '{sector}': veri yok")
+                print(f"  '{term}': veri yok (total={data.get('total',0)})")
                 break
 
-            # Tekrar ekleme: id kontrolü
-            existing_ids = {p.get("id") for p in projects}
-            new_items = [i for i in items if i.get("id") not in existing_ids]
-            projects.extend(new_items)
-            print(f"  '{sector}' {start}–{start+len(items)}: {len(new_items)} yeni (toplam: {len(projects)})")
+            # Sadece proje adında solar/pv geçenleri al
+            kw = {"solar", "pv", "photovoltaic"}
+            solar = [p for p in items
+                     if any(w in (p.get("project_name") or "").lower() for w in kw)]
 
-            if len(items) < rows:
+            existing_ids = {p.get("id") for p in projects}
+            new_items = [p for p in solar if p.get("id") not in existing_ids]
+            projects.extend(new_items)
+
+            if new_items:
+                print(f"  '{term}' sayfa {start//rows+1}: {len(new_items)} solar proje")
+
+            if len(items) < rows or start > 2000:
                 break
             start += rows
 
