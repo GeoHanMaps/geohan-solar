@@ -1,0 +1,93 @@
+{
+  "TR": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   34,
+    "notes": "Orman ve su alanları yasak; tarım arazisi izin gerektirir (5403 sayılı Kanun)"
+  },
+  "DE": {
+    "max_slope_pct": 10,
+    "forbidden_lc":  [10, 40, 70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   110,
+    "notes": "Tarım arazileri federal düzeyde GES için kısıtlı (EEG 2023)"
+  },
+  "ES": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   66,
+    "notes": "Kırsal arazi izinleri otonom topluluk bazında değişir"
+  },
+  "FR": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40, 30],
+    "min_grid_kv":   63,
+    "notes": "Doğal park ve Natura 2000 alanları ek kısıt içerir"
+  },
+  "IT": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   66,
+    "notes": "Arkeolojik alan tampon bölgeleri ek kısıt içerir"
+  },
+  "SA": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   33,
+    "notes": "Çöl arazisi GES için idealdir; askeri bölgeler hariç"
+  },
+  "IN": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   33,
+    "notes": "PM-KUSUM kapsamında tarım arazisine izin mümkün (eyalet bazlı)"
+  },
+  "AU": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   66,
+    "notes": "Aboriginal land ve heritage alanları ek protokol gerektirir"
+  },
+  "US": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   69,
+    "notes": "Federal BLM arazileri ve eyalet kuralları farklılık gösterebilir"
+  },
+  "ZA": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   33,
+    "notes": "REIPPPP kapsamında izin prosedürleri uygulanır"
+  },
+  "EG": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   22,
+    "notes": "New Renewables Authority izni zorunlu"
+  },
+  "MA": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   22,
+    "notes": "MASEN koordinasyonu gerektirir"
+  },
+  "DEFAULT": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   0,
+    "notes": "Global varsayılan — ülke spesifik kural tanımlanmamış"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "weights": {
+    "egim":   0.15,
+    "ghi":    0.25,
+    "baki":   0.08,
+    "golge":  0.07,
+    "arazi":  0.05,
+    "sebeke": 0.20,
+    "erisim": 0.10,
+    "yasal":  0.10
+  },
+  "calibrated": false,
+  "calibrated_at": null,
+  "n_sites": 0,
+  "notes": "Ağırlıklar uzman tahminine dayanır. Pilot validasyon sonrası scripts/calibrate_weights.py ile güncellenir."
+}

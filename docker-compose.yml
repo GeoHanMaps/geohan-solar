@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=true
+    volumes:
+      - gee-credentials:/home/geohan/.config/earthengine
+      - ./config:/app/config:ro
+      - ./cache:/app/cache
+      - maps-data:/app/data/maps
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - gee-credentials:/home/geohan/.config/earthengine
+      - ./config:/app/config:ro
+      - ./cache:/app/cache
+      - maps-data:/app/data/maps
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  gee-credentials:
+  maps-data:
