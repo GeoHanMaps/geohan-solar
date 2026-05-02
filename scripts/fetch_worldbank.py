@@ -15,8 +15,9 @@ from pathlib import Path
 OUT_DIR = Path(__file__).parent.parent / "data" / "benchmark"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# World Bank Projects API
+# World Bank Projects API (v2 — 2024+)
 WB_API = "https://search.worldbank.org/api/v2/projects"
+WB_HEADERS = {"User-Agent": "GeoHan Solar Intelligence/1.0 (info@geohan.com)"}
 
 
 def fetch_solar_projects() -> list[dict]:
@@ -25,35 +26,52 @@ def fetch_solar_projects() -> list[dict]:
     rows = 100
     start = 0
 
-    while True:
-        resp = requests.get(
-            WB_API,
-            params={
-                "format": "json",
-                "rows": rows,
-                "start": start,
-                "sector_exact": "RE - Solar",
-                "fl": "id,project_name,countryname,country_code,totalamt,boardapprovaldate,closingdate,sector1,status",
-            },
-            timeout=60,
-        )
+    # Birden fazla sektor filtresi dene
+    sector_filters = ["RE - Solar", "Solar", "Renewable Energy"]
 
-        if resp.status_code != 200:
-            print(f"  HTTP {resp.status_code}")
-            break
+    for sector in sector_filters:
+        start = 0
+        while True:
+            resp = requests.get(
+                WB_API,
+                params={
+                    "format": "json",
+                    "rows": rows,
+                    "start": start,
+                    "sector_exact": sector,
+                    "fl": "id,project_name,countryname,country_code,totalamt,boardapprovaldate,closingdate,sector1,status",
+                },
+                headers=WB_HEADERS,
+                timeout=60,
+            )
 
-        data = resp.json()
-        items = list(data.get("projects", {}).values()) if isinstance(data.get("projects"), dict) else []
+            if resp.status_code != 200:
+                print(f"  Sektör '{sector}': HTTP {resp.status_code}")
+                break
 
-        if not items:
-            break
+            data = resp.json()
+            # API bazen dict, bazen list döner
+            raw = data.get("projects", {})
+            if isinstance(raw, dict):
+                items = list(raw.values())
+            elif isinstance(raw, list):
+                items = raw
+            else:
+                items = []
 
-        projects.extend(items)
-        print(f"  {start}–{start+len(items)}: {len(items)} proje (toplam: {len(projects)})")
+            if not items:
+                print(f"  Sektör '{sector}': veri yok")
+                break
 
-        if len(items) < rows:
-            break
-        start += rows
+            # Tekrar ekleme: id kontrolü
+            existing_ids = {p.get("id") for p in projects}
+            new_items = [i for i in items if i.get("id") not in existing_ids]
+            projects.extend(new_items)
+            print(f"  '{sector}' {start}–{start+len(items)}: {len(new_items)} yeni (toplam: {len(projects)})")
+
+            if len(items) < rows:
+                break
+            start += rows
 
     return projects
 

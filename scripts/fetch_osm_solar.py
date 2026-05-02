@@ -66,6 +66,7 @@ def fetch(country: str | None = None) -> list[dict]:
     resp = requests.post(
         OVERPASS_URL,
         data={"data": query},
+        headers={"User-Agent": "GeoHan Solar Intelligence/1.0 (info@geohan.com)"},
         timeout=180,
     )
     resp.raise_for_status()
