@@ -24,8 +24,8 @@ class AnalysisRequest(BaseModel):
     panel_tech:   PanelTech    = PanelTech.mono
     tracking:     TrackingType = TrackingType.fixed
     gcr:          Optional[float] = Field(None, gt=0, lt=1)
-    country_code: str          = Field("DEFAULT", max_length=2,
-                                       description="ISO-3166-1 alpha-2 ülke kodu (TR, DE, …)")
+    country_code: Optional[str] = Field(None, max_length=2,
+                                        description="ISO-3166-1 alpha-2 ülke kodu (TR, DE, …)")
 
     @model_validator(mode="after")
     def tracking_slope_warning(self):

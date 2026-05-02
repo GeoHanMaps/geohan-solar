@@ -25,6 +25,8 @@ from app.services import (
                  name="geohan.analyse")
 def analyse_task(self, job_id: str, req_data: dict) -> None:
     req = AnalysisRequest(**req_data)
+    if req.country_code is None:
+        req.country_code = "DEFAULT"
     store.set_running(job_id)
     try:
         t = terrain.analyse(req.lat, req.lon)
