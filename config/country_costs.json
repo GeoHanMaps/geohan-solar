@@ -40,15 +40,15 @@
     "epc_usd_per_mw": 1100000,
     "grid_cost_per_km": {"34kv": 60000, "154kv": 220000, "380kv": 480000},
     "mv_threshold_mw": 5,
-    "hv_threshold_mw": 50,
+    "hv_threshold_mw": 150,
     "financing_rate": 0.12,
     "land_cost_usd_per_ha": 3000,
     "import_tariff_factor": 1.0,
-    "ppa_usd_per_kwh": 0.0325,
+    "ppa_usd_per_kwh": 0.055,
     "permit_years": 2,
     "grid_reliability": 0.88,
     "logistics_factor": 1.0,
-    "notes": "YEKA GES-2024 benchmark; TCMB döviz kuru"
+    "notes": "Bilateral PPA/EPİAŞ piyasa fiyatı; 154kV eşiği TEİAŞ ~150MW"
   },
 
   "DE": {
@@ -239,11 +239,11 @@
     "financing_rate": 0.10,
     "land_cost_usd_per_ha": 800,
     "import_tariff_factor": 1.25,
-    "ppa_usd_per_kwh": 0.028,
+    "ppa_usd_per_kwh": 0.045,
     "permit_years": 2,
     "grid_reliability": 0.80,
     "logistics_factor": 1.1,
-    "notes": "MNRE verisi; %25 panel ithalat vergisi"
+    "notes": "DISCOM bilateral PPA; SECI ihale rekoru $0.028 — pratikte $0.045"
   },
 
   "CN": {
@@ -439,11 +439,11 @@
     "financing_rate": 0.055,
     "land_cost_usd_per_ha": 100,
     "import_tariff_factor": 1.05,
-    "ppa_usd_per_kwh": 0.013,
+    "ppa_usd_per_kwh": 0.025,
     "permit_years": 1,
     "grid_reliability": 0.97,
     "logistics_factor": 1.0,
-    "notes": "NEOM/NWEC ihalesi $0.0129/kWh rekoru; arazi maliyeti yok denecek kadar düşük"
+    "notes": "Özel geliştirici bilateral PPA; NEOM rekoru ($0.013) kamu ihalesi - özel proje için $0.025"
   },
 
   "AE": {
@@ -456,11 +456,11 @@
     "financing_rate": 0.05,
     "land_cost_usd_per_ha": 200,
     "import_tariff_factor": 1.0,
-    "ppa_usd_per_kwh": 0.0135,
+    "ppa_usd_per_kwh": 0.026,
     "permit_years": 1,
     "grid_reliability": 0.98,
     "logistics_factor": 1.0,
-    "notes": "Al Dhafra 2GW; düşük LCOE rekoru"
+    "notes": "Al Dhafra kamu rekoru $0.0135 — özel bilateral PPA $0.026"
   },
 
   "EG": {
@@ -671,11 +671,11 @@
     "financing_rate": 0.18,
     "land_cost_usd_per_ha": 100,
     "import_tariff_factor": 1.25,
-    "ppa_usd_per_kwh": 0.065,
+    "ppa_usd_per_kwh": 0.130,
     "permit_years": 4,
     "grid_reliability": 0.45,
     "logistics_factor": 1.8,
-    "notes": "Sahra çölüne yakın; lojistik çok zor"
+    "notes": "Mini-grid/off-grid; dizel yerine geçme değeri ~$0.15/kWh; pratikte $0.13"
   },
 
   "NE": {
@@ -688,11 +688,11 @@
     "financing_rate": 0.20,
     "land_cost_usd_per_ha": 50,
     "import_tariff_factor": 1.30,
-    "ppa_usd_per_kwh": 0.070,
+    "ppa_usd_per_kwh": 0.150,
     "permit_years": 5,
     "grid_reliability": 0.35,
     "logistics_factor": 2.0,
-    "notes": "En yüksek lojistik zorluğu; şebeke neredeyse yok"
+    "notes": "Neredeyse şebekesiz; dizel yerine geçme $0.18/kWh; mini-grid PPA $0.15"
   },
 
   "CD": {
