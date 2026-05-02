@@ -35,11 +35,60 @@
     "notes": "Arkeolojik alan tampon bölgeleri ek kısıt içerir"
   },
   "SA": {
-    "max_slope_pct": 20,
+    "max_slope_pct": 25,
     "forbidden_lc":  [70, 80, 90, 95],
     "soft_block_lc": [],
     "min_grid_kv":   33,
-    "notes": "Çöl arazisi GES için idealdir; askeri bölgeler hariç"
+    "notes": "Çöl arazisi GES için idealdir; askeri bölgeler hariç. Dağlık çöl arazisi için 25% eğim sınırı uygulanır"
+  },
+  "AE": {
+    "max_slope_pct": 25,
+    "forbidden_lc":  [70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   33,
+    "notes": "Düz çöl arazi; GES için ideal"
+  },
+  "ML": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   0,
+    "notes": "Sahra çölü sınırı; şebeke altyapısı minimal"
+  },
+  "NE": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   0,
+    "notes": "Nijer; Sahra çölü; şebeke neredeyse yok"
+  },
+  "NG": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   11,
+    "notes": "Nijerya; NERC lisans zorunluluğu"
+  },
+  "BR": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   13.8,
+    "notes": "Amazon ormanı kesin hard block; ANEEL lisans zorunlu"
+  },
+  "CN": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   10,
+    "notes": "Tarım arazisi üzerine agrivoltaic izin mümkün (pilot bölgeler)"
+  },
+  "IN": {
+    "max_slope_pct": 15,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [40],
+    "min_grid_kv":   33,
+    "notes": "PM-KUSUM kapsamında tarım arazisine izin mümkün (eyalet bazlı)"
   },
   "IN": {
     "max_slope_pct": 15,
