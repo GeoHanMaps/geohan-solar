@@ -59,12 +59,32 @@ class CapacityResult(BaseModel):
     gcr_effective: float
 
 
+class GridConnectionCost(BaseModel):
+    voltage_level:       str
+    line_km:             float
+    line_cost_usd:       float
+    substation_cost_usd: float
+    total_usd:           float
+
+
+class LogisticsCost(BaseModel):
+    truck_trips:          int
+    road_km:              float
+    fuel_liters:          float
+    fuel_cost_tl:         float
+    road_improvement_tl:  float
+    total_tl:             float
+
+
 class FinancialResult(BaseModel):
-    usd_tl:          float
-    investment_usd:  float
-    investment_tl:   float
-    annual_revenue_tl: float
-    payback_years:   float
+    usd_tl:               float
+    base_investment_usd:  float
+    grid_connection:      GridConnectionCost
+    logistics:            LogisticsCost
+    total_investment_usd: float
+    total_investment_tl:  float
+    annual_revenue_tl:    float
+    payback_years:        float
 
 
 class AnalysisResult(BaseModel):

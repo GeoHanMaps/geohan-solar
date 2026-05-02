@@ -46,7 +46,8 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
                            t["slope_mean_pct"], req.country_code)
         cap  = capacity.calculate(t["slope_mean_pct"], ghi, req.area_ha,
                                    req.panel_tech, req.tracking, req.gcr)
-        fin  = financial.calculate(cap["total_mw"], cap["annual_gwh"])
+        fin  = financial.calculate(cap["total_mw"], cap["annual_gwh"],
+                                   grid_km=gkm, road_km=rkm)
         res  = mcda.score(t["slope_mean_pct"], ghi, t["aspect_score"],
                           t["shadow_score"], t["lc_code"], gkm, rkm,
                           yasal_score=leg["score"], hard_block=leg["hard_block"])
