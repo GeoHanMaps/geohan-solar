@@ -1,4 +1,6 @@
+import json
 import warnings
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DEFAULT_SECRET = "change-me-in-production-use-a-random-32-byte-hex"
@@ -18,11 +20,11 @@ class Settings(BaseSettings):
 
     # Solar kaynakları
     open_meteo_archive_url: str = "https://archive-api.open-meteo.com/v1/archive"
-    cams_ads_url: str = "https://ads.atmosphere.copernicus.eu/api"   # CDS API v2
+    cams_ads_url: str = "https://ads.atmosphere.copernicus.eu/api"
     nsrdb_url: str = "https://developer.nrel.gov/api/solar/solar_resource/v1.json"
 
     # API key'ler — .env'den okunur, boşsa kaynak atlanır
-    cams_key: str = ""    # CDS v2: sadece UUID key (UID ayrı değil)
+    cams_key: str = ""
     nsrdb_key: str = ""
     nsrdb_email: str = ""
 
@@ -38,16 +40,27 @@ class Settings(BaseSettings):
     secret_key: str = _DEFAULT_SECRET
     api_username: str = "admin"
     api_password: str = "geohan2024"
-    access_token_expire_minutes: int = 1440   # 24 saat
+    access_token_expire_minutes: int = 1440
 
-    # CORS — production'da kendi domain'ini yaz
+    # CORS — virgülle ayrılmış string ("*" veya "https://a.com,https://b.com")
+    # veya JSON array (["*"]) olarak .env'de verilebilir
     cors_origins: list[str] = ["*"]
 
-    # Rate limiting (istek/dakika)
-    rate_limit_analyses: str = "10/minute"   # analiz başlatma
-    rate_limit_default:  str = "60/minute"   # diğer tüm endpoint'ler
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("["):
+                return json.loads(v)
+            return [o.strip() for o in v.split(",") if o.strip()]
+        return v
 
-    # Heatmap COG depolama dizini (mutlak veya göreceli yol)
+    # Rate limiting (istek/dakika)
+    rate_limit_analyses: str = "10/minute"
+    rate_limit_default: str = "60/minute"
+
+    # Heatmap COG depolama dizini
     maps_data_dir: str = "data/maps"
 
     # Production modunda OpenAPI docs kapalı
