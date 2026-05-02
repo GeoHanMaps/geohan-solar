@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.signals import worker_process_init
 from app.config import settings
 
 celery_app = Celery(
@@ -7,6 +8,15 @@ celery_app = Celery(
     backend=settings.redis_url,
     include=["app.tasks"],
 )
+
+@worker_process_init.connect
+def init_gee(**kwargs):
+    try:
+        import ee
+        ee.Initialize(project=settings.gee_project)
+    except Exception:
+        pass  # GEE yoksa terrain servisi kendi hatasını verir
+
 
 celery_app.conf.update(
     task_serializer="json",
