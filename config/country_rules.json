@@ -90,13 +90,6 @@
     "min_grid_kv":   33,
     "notes": "PM-KUSUM kapsamında tarım arazisine izin mümkün (eyalet bazlı)"
   },
-  "IN": {
-    "max_slope_pct": 15,
-    "forbidden_lc":  [10, 70, 80, 90, 95],
-    "soft_block_lc": [40],
-    "min_grid_kv":   33,
-    "notes": "PM-KUSUM kapsamında tarım arazisine izin mümkün (eyalet bazlı)"
-  },
   "AU": {
     "max_slope_pct": 20,
     "forbidden_lc":  [10, 70, 80, 90, 95],

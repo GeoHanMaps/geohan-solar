@@ -40,7 +40,7 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
                    req.lat, req.lon, t["slope_mean_deg"], t["aspect_deg"],
                    horizon_profile=hp)
         ghi  = downscale.apply(ghi, corr)
-        gkm  = grid.nearest_substation_km(req.lat, req.lon)
+        gkm  = grid.nearest_substation_km(req.lat, req.lon, country_code=req.country_code)
         rkm  = access.nearest_road_km(req.lat, req.lon)
         leg  = legal.check(req.lat, req.lon, t["lc_code"],
                            t["slope_mean_pct"], req.country_code)
@@ -97,13 +97,15 @@ def _analyse_one(loc, req: BatchRequest) -> dict | None:
                    loc.lat, loc.lon, t["slope_mean_deg"], t["aspect_deg"],
                    horizon_profile=hp)
         ghi = downscale.apply(ghi, corr)
-        gkm = grid.nearest_substation_km(loc.lat, loc.lon)
+        gkm = grid.nearest_substation_km(loc.lat, loc.lon, country_code=req.country_code)
         rkm = access.nearest_road_km(loc.lat, loc.lon)
         leg = legal.check(loc.lat, loc.lon, t["lc_code"],
                           t["slope_mean_pct"], req.country_code)
         cap = capacity.calculate(t["slope_mean_pct"], ghi, req.area_ha,
                                  req.panel_tech, req.tracking, req.gcr)
-        fin = financial.calculate(cap["total_mw"], cap["annual_gwh"])
+        fin = financial.calculate(cap["total_mw"], cap["annual_gwh"],
+                                  grid_km=gkm, road_km=rkm,
+                                  country_code=req.country_code)
         res = mcda.score(t["slope_mean_pct"], ghi, t["aspect_score"],
                          t["shadow_score"], t["lc_code"], gkm, rkm,
                          yasal_score=leg["score"], hard_block=leg["hard_block"])
