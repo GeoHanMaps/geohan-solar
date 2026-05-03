@@ -153,7 +153,7 @@ class TestGenerate:
         with rasterio.open(io.BytesIO(tiff)) as src:
             data = src.read(1)
         valid = data[data != -9999.0]
-        assert (valid == 0.0).all()
+        assert (valid == -1.0).all()
 
     def test_nodata_outside_polygon(self):
         """Polygon dışı → nodata=-9999."""

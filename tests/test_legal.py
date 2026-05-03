@@ -20,10 +20,11 @@ class TestGlobalHardBlocks:
 
 
 class TestSoftBlocks:
-    def test_cropland_soft_block_tr(self):
+    def test_cropland_hard_block_tr(self):
+        """TR'de LC40 (tarım) artık 5403 sayılı Kanun gereği hard block."""
         result = legal.check(39.0, 35.0, lc_code=40, slope_pct=3.0, country_code="TR")
-        assert result["hard_block"] is False
-        assert result["score"] == 40
+        assert result["hard_block"] is True
+        assert result["score"] == 0
 
     def test_cropland_soft_block_default(self):
         result = legal.check(0.0, 0.0, lc_code=40, slope_pct=3.0, country_code="DEFAULT")
@@ -56,11 +57,18 @@ class TestSlopeLimit:
 
 
 class TestCleanSite:
-    @pytest.mark.parametrize("lc_code", [20, 30, 60, 100])
+    @pytest.mark.parametrize("lc_code", [60, 100])
     def test_permissible_lc_codes(self, lc_code):
         result = legal.check(37.0, 32.0, lc_code=lc_code, slope_pct=5.0, country_code="TR")
         assert result["score"] == 100
         assert result["hard_block"] is False
+
+    @pytest.mark.parametrize("lc_code", [20, 30])
+    def test_soft_block_lc_codes_tr(self, lc_code):
+        """TR'de LC20/30 (makilik/çayır) soft block — izne tabi."""
+        result = legal.check(37.0, 32.0, lc_code=lc_code, slope_pct=5.0, country_code="TR")
+        assert result["hard_block"] is False
+        assert result["score"] == 40
 
     def test_unknown_country_uses_default(self):
         result = legal.check(0.0, 0.0, lc_code=60, slope_pct=5.0, country_code="XX")
