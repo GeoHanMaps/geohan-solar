@@ -1,10 +1,10 @@
 {
   "TR": {
     "max_slope_pct": 15,
-    "forbidden_lc":  [10, 70, 80, 90, 95],
-    "soft_block_lc": [40],
+    "forbidden_lc":  [10, 40, 50, 70, 80, 90, 95],
+    "soft_block_lc": [20, 30],
     "min_grid_kv":   34,
-    "notes": "Orman ve su alanları yasak; tarım arazisi izin gerektirir (5403 sayılı Kanun)"
+    "notes": "5403 sayılı Kanun: mutlak/özel ürün/dikili tarım arazileri (LC40) yasak. Makilik/çayır (LC20/30) izne tabi. Orman (LC10), su (LC80/90/95), yerleşim (LC50) yasak."
   },
   "DE": {
     "max_slope_pct": 10,

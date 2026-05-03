@@ -10,8 +10,10 @@ Yöntem:
 """
 
 import io
+import json
 import numpy as np
 import ee
+from pathlib import Path
 from shapely.geometry import shape, mapping
 import rasterio
 from rasterio.transform import from_bounds
@@ -23,6 +25,17 @@ from app.services.mcda import LC_SCORE, get_weights
 
 _NODATA = -9999.0
 _GLOBAL_HARD_LC = {70, 80, 90, 95}  # kar/buz, su, sulak alan, mangrov
+_SOFT_BLOCK_SCORE = 25.0             # soft block alanlar için LC skoru
+
+_RULES_PATH = Path(__file__).parents[2] / "config" / "country_rules.json"
+
+
+def _country_rules(country_code: str) -> dict:
+    try:
+        rules = json.loads(_RULES_PATH.read_text())
+        return rules.get(country_code, rules.get("DEFAULT", {}))
+    except Exception:
+        return {}
 
 
 def _utm_epsg(lat: float, lon: float) -> int:
@@ -166,10 +179,21 @@ def generate(
     grid_sc = _s_dist(np.full((rows, cols), grid_km), 1.0, 30.0)
     road_sc = _s_dist(np.full((rows, cols), road_km), 0.5, 10.0)
 
-    # 6. Arazi örtüsü ve yasal skoru
-    lc_sc    = np.vectorize(lambda c: LC_SCORE.get(int(c), 50))(lc).astype(float)
-    hard_blk = np.vectorize(lambda c: int(c) in _GLOBAL_HARD_LC)(lc)
-    yasal_sc = np.where(hard_blk, 0.0, 100.0)
+    # 6. Arazi örtüsü ve yasal skoru (ülke kuralları dahil)
+    rules = _country_rules(country_code)
+    country_forbidden = set(rules.get("forbidden_lc", []))
+    soft_block_lc     = set(rules.get("soft_block_lc", []))
+    all_hard_lc       = _GLOBAL_HARD_LC | country_forbidden
+
+    hard_blk = np.vectorize(lambda c: int(c) in all_hard_lc)(lc)
+    soft_blk = np.vectorize(lambda c: int(c) in soft_block_lc)(lc)
+
+    lc_sc = np.vectorize(
+        lambda c: 0.0 if int(c) in all_hard_lc
+                  else (_SOFT_BLOCK_SCORE if int(c) in soft_block_lc
+                        else LC_SCORE.get(int(c), 50))
+    )(lc).astype(float)
+    yasal_sc = np.where(hard_blk, 0.0, np.where(soft_blk, 40.0, 100.0))
 
     # 7. MCDA toplam
     w = get_weights()
