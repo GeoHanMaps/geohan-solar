@@ -35,7 +35,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/geohan-api
+          images: ghcr.io/geohanmaps/geohan-api
           tags: |
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
@@ -66,7 +66,7 @@ jobs:
             set -euo pipefail
             cd /home/geohan/geohan/geohan-solar
 
-            IMAGE="ghcr.io/${{ github.repository_owner }}/geohan-api:${{ needs.build-push.outputs.image_tag }}"
+            IMAGE="ghcr.io/geohanmaps/geohan-api:${{ needs.build-push.outputs.image_tag }}"
 
             # Önceki image SHA'sını kaydet (rollback için)
             PREV_IMAGE=$(docker inspect \
