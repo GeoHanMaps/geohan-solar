@@ -65,6 +65,8 @@ jobs:
             set -euo pipefail
             cd /home/geohan/geohan/geohan-solar
 
+            git pull origin main
+
             IMAGE="ghcr.io/geohanmaps/geohan-api:${{ needs.build-push.outputs.image_tag }}"
 
             # Önceki image SHA'sını kaydet (rollback için)
