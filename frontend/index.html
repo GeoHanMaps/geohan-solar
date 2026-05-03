@@ -117,9 +117,17 @@
     #legend h4 { font-size: 11px; color: #4a9eca; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
     .legend-bar {
       height: 12px; border-radius: 4px;
-      background: linear-gradient(to right, #dc1414, #e8a020, #14c840);
+      background: linear-gradient(to right, #ffffff, #ffff00, #00c800);
     }
     .legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: #6a8aa0; margin-top: 4px; }
+    .legend-block {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 8px; font-size: 10px; color: #6a8aa0;
+    }
+    .legend-block-swatch {
+      width: 18px; height: 12px; border-radius: 3px; flex-shrink: 0;
+      background: #ff0000; border: 2px solid #000;
+    }
 
     /* Çizim ipucu */
     #draw-hint {
@@ -272,7 +280,11 @@
   <div id="legend" style="display:none">
     <h4>Uygunluk Skoru</h4>
     <div class="legend-bar"></div>
-    <div class="legend-labels"><span>0 — Uygunsuz</span><span>50</span><span>100 — Uygun</span></div>
+    <div class="legend-labels"><span>Düşük</span><span>Orta</span><span>Yüksek</span></div>
+    <div class="legend-block">
+      <div class="legend-block-swatch"></div>
+      <span>Yasal Kısıt — GES Yapılamaz</span>
+    </div>
   </div>
 </div>
 

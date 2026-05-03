@@ -1,6 +1,7 @@
 """
 XYZ tile server — GeoTIFF'ten PNG tile üretir.
-Renk skalası: kırmızı (0) → sarı (50) → yeşil (100).
+Renk skalası: beyaz (0) → sarı (50) → yeşil (100).
+Hard block (score=-1): saf kırmızı, siyah kenarlık.
 """
 
 import io
@@ -25,13 +26,17 @@ def _tile_bounds(z: int, x: int, y: int) -> tuple[float, float, float, float]:
     return west, lat_s, east, lat_n
 
 
-def _rdylgn_rgba(norm: np.ndarray, valid: np.ndarray) -> np.ndarray:
-    """0-1 değeri → RGBA (uint8). Kırmızı=0, Sarı=0.5, Yeşil=1."""
+def _score_rgba(norm: np.ndarray, valid: np.ndarray) -> np.ndarray:
+    """0-1 → RGBA (uint8). Beyaz=0, Sarı=0.5, Yeşil=1."""
     n = np.clip(norm, 0.0, 1.0)
-    r = np.where(n < 0.5, 220,         np.clip((220 * (1 - n) * 2), 0, 220)).astype(np.uint8)
-    g = np.where(n < 0.5, np.clip((220 * n * 2), 0, 220), 180).astype(np.uint8)
-    b = np.where(n < 0.5, 20,          np.clip((40 * n), 0, 40)).astype(np.uint8)
-    a = np.where(valid, 195, 0).astype(np.uint8)   # ~76% opaklık
+    # Beyaz→Sarı: B 255→0, RG sabit 255
+    # Sarı→Yeşil: R 255→0, G 255→200, B 0
+    r = np.where(n < 0.5, 255,
+                 np.clip(255 * (1.0 - (n - 0.5) * 2.0), 0, 255)).astype(np.uint8)
+    g = np.where(n < 0.5, 255,
+                 np.clip(200 + 55 * (1.0 - (n - 0.5) * 2.0), 0, 255)).astype(np.uint8)
+    b = np.where(n < 0.5, np.clip(255 * (1.0 - n * 2.0), 0, 255), 0).astype(np.uint8)
+    a = np.where(valid, 210, 0).astype(np.uint8)
     return np.stack([r, g, b, a], axis=-1)
 
 
@@ -44,7 +49,7 @@ def _empty_tile() -> bytes:
 
 def get_tile(cog_path: str, z: int, x: int, y: int) -> bytes:
     """
-    COG GeoTIFF'ten XYZ tile oku, RdYlGn PNG döndür.
+    COG GeoTIFF'ten XYZ tile oku, PNG döndür.
     Kapsam dışıysa şeffaf tile döner.
     """
     west, south, east, north = _tile_bounds(z, x, y)
@@ -67,13 +72,16 @@ def get_tile(cog_path: str, z: int, x: int, y: int) -> bytes:
     blocked = (data == -1.0)
     valid   = (data >= 0.0) & (data <= 100.0)
     norm    = np.where(valid, data / 100.0, 0.0)
-    rgba    = _rdylgn_rgba(norm, valid)
+    rgba    = _score_rgba(norm, valid)
 
-    # Yasal kısıt (hard block) → koyu kırmızı tarama
+    # Hard block: saf kırmızı iç, siyah kenar (1px komşu kontrolü)
     if blocked.any():
-        stripe = (np.arange(_TILE_SIZE)[:, None] + np.arange(_TILE_SIZE)[None, :]) % 8 < 4
-        rgba[blocked & stripe]  = [160,  20,  20, 210]
-        rgba[blocked & ~stripe] = [100,  10,  10, 180]
+        p = np.pad(blocked, 1, constant_values=False)
+        all4 = p[:-2, 1:-1] & p[2:, 1:-1] & p[1:-1, :-2] & p[1:-1, 2:]
+        interior = blocked & all4
+        edge     = blocked & ~all4
+        rgba[interior] = [255,  0,  0, 235]   # saf kırmızı
+        rgba[edge]     = [  0,  0,  0, 255]   # siyah kenarlık
 
     buf = io.BytesIO()
     Image.fromarray(rgba, "RGBA").save(buf, "PNG")
