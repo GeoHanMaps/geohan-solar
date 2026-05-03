@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     cams_key: str = ""
     nsrdb_key: str = ""
     nsrdb_email: str = ""
+    anthropic_api_key: str = ""
 
     # Cache TTL (gün)
     cache_ttl_solar_days: float = 30.0

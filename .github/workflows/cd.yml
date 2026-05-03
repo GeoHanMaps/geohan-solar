@@ -62,6 +62,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known_hosts: "178.104.69.28 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBowhXeqvtxyC/eJXYp/q6UzLjBTqlOFh9v9JChi4frM"
           script: |
             set -euo pipefail
             cd /home/geohan/geohan/geohan-solar

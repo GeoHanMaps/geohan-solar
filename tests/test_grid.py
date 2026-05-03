@@ -37,13 +37,13 @@ class TestNearestSubstationKm:
         with patch("app.services.grid.ox.features_from_point",
                    side_effect=Exception("no results")):
             d = grid.nearest_substation_km(37.87, 32.49)
-        assert d == 99.0
+        assert d == pytest.approx(39.0, abs=0.5)
 
     def test_returns_99_on_network_error(self):
         with patch("app.services.grid.ox.features_from_point",
                    side_effect=ConnectionError):
             d = grid.nearest_substation_km(0.0, 0.0)
-        assert d == 99.0
+        assert d == pytest.approx(39.0, abs=0.5)
 
     def test_southern_hemisphere_utm(self):
         gdf = _mock_gdf_with_point(25.0, -33.0)

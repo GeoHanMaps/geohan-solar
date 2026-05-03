@@ -215,7 +215,7 @@ def _two_col_table(left_data: list, right_data: list,
     return outer
 
 
-def generate(job_id: str, job_data: dict) -> bytes:
+def generate(job_id: str, job_data: dict, narrative: str | None = None) -> bytes:
     result   = job_data["result"]
     name     = job_data.get("name")
     bd       = result["breakdown"]
@@ -258,6 +258,16 @@ def generate(job_id: str, job_data: dict) -> bytes:
     story.append(_breakdown_table(bd))
     story.append(Spacer(1, 0.4*cm))
 
+    # AI narratifi (varsa)
+    if narrative:
+        story.append(Paragraph("Yatirim Degerlendirmesi", S_H2))
+        for para in narrative.split("\n\n"):
+            para = para.strip()
+            if para:
+                story.append(Paragraph(para, S_NORMAL))
+                story.append(Spacer(1, 0.15*cm))
+        story.append(Spacer(1, 0.25*cm))
+
     # Kapasite + Finansal
     cap_rows = [
         [Paragraph("MW/ha (dinamik)", S_NORMAL), Paragraph(str(cap["mw_per_ha"]), S_NORMAL)],
@@ -267,7 +277,7 @@ def generate(job_id: str, job_data: dict) -> bytes:
     ]
     fin_rows = [
         [Paragraph("USD/TL (TCMB)",   S_NORMAL), Paragraph(f"{fin['usd_tl']:.2f}", S_NORMAL)],
-        [Paragraph("Yatirim",         S_NORMAL), Paragraph(f"${fin['investment_usd']:,.0f}", S_NORMAL)],
+        [Paragraph("Yatirim",         S_NORMAL), Paragraph(f"${fin['total_investment_usd']:,.0f}", S_NORMAL)],
         [Paragraph("Yillik Gelir",    S_NORMAL), Paragraph(f"{fin['annual_revenue_tl']/1e6:.1f} M TL", S_NORMAL)],
         [Paragraph("Geri Odeme",      S_NORMAL), Paragraph(f"{fin['payback_years']:.1f} yil", S_NORMAL)],
     ]

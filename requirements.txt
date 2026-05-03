@@ -55,3 +55,6 @@ redis>=5.0.0
 
 # Heatmap / tile
 Pillow>=10.0.0
+
+# AI narrative
+anthropic>=0.40.0

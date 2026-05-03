@@ -1,0 +1,5 @@
+[lint]
+# E402: test dosyaları sys.modules stub'u kurulduktan sonra import eder — kasıtlı
+# E402: app/main.py'de maps router döngüsel import nedeniyle geç import ediliyor
+# E701: mcda.py ve report.py'de compact one-liner score fonksiyonları — kasıtlı stil
+per-file-ignores = { "tests/*" = ["E402"], "app/main.py" = ["E402"], "app/services/mcda.py" = ["E701"], "app/services/report.py" = ["E701"] }

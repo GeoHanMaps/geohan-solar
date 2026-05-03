@@ -11,7 +11,7 @@ class TestAnalysisRequest:
         req = AnalysisRequest(lat=37.87, lon=32.49, area_ha=50.0)
         assert req.panel_tech == PanelTech.mono
         assert req.tracking == TrackingType.fixed
-        assert req.country_code == "DEFAULT"
+        assert req.country_code is None
 
     def test_lat_out_of_range(self):
         with pytest.raises(ValidationError):

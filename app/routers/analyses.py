@@ -82,7 +82,7 @@ def get_report(job_id: str, _: str = Depends(get_current_user)):
         raise HTTPException(status_code=425, detail=f"Analiz henüz tamamlanmadı: {job['status']}")
 
     from app.services import report
-    pdf_bytes = report.generate(job_id, job)
+    pdf_bytes = report.generate(job_id, job, narrative=job.get("narrative"))
 
     filename = f"geohan_{job_id[:8]}.pdf"
     return StreamingResponse(

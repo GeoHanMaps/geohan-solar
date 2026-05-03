@@ -78,6 +78,13 @@ def batch_update_progress(job_id: str, completed: int, results: list) -> None:
         _save(job_id, data)
 
 
+def set_narrative(job_id: str, text: str) -> None:
+    data = _load(job_id)
+    if data:
+        data["narrative"] = text
+        _save(job_id, data)
+
+
 def list_all() -> list[dict]:
     keys = _r().keys(f"{_PREFIX}*")
     out  = []

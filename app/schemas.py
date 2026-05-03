@@ -26,6 +26,8 @@ class AnalysisRequest(BaseModel):
     gcr:          Optional[float] = Field(None, gt=0, lt=1)
     country_code: Optional[str] = Field(None, max_length=2,
                                         description="ISO-3166-1 alpha-2 ülke kodu (TR, DE, …)")
+    language:     str           = Field("Turkish",
+                                        description="Rapor dili — dil adı (English, Arabic, German…) veya ISO kodu (en, ar, de…)")
 
     @model_validator(mode="after")
     def tracking_slope_warning(self):
@@ -186,6 +188,8 @@ class BatchRequest(BaseModel):
     tracking:     TrackingType        = TrackingType.fixed
     gcr:          Optional[float]     = Field(None, gt=0, lt=1)
     country_code: str                 = Field("DEFAULT", max_length=2)
+    language:     str                 = Field("Turkish",
+                                              description="Rapor dili — dil adı veya ISO kodu")
 
 
 class BatchLocationResult(BaseModel):
