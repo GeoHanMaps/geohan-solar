@@ -64,9 +64,16 @@ def get_tile(cog_path: str, z: int, x: int, y: int) -> bytes:
             fill_value=_NODATA,
         )
 
-    valid = (data > 0.0) & (data <= 100.0)
-    norm  = np.where(valid, data / 100.0, 0.0)
-    rgba  = _rdylgn_rgba(norm, valid)
+    blocked = (data == -1.0)
+    valid   = (data >= 0.0) & (data <= 100.0)
+    norm    = np.where(valid, data / 100.0, 0.0)
+    rgba    = _rdylgn_rgba(norm, valid)
+
+    # Yasal kısıt (hard block) → koyu kırmızı tarama
+    if blocked.any():
+        stripe = (np.arange(_TILE_SIZE)[:, None] + np.arange(_TILE_SIZE)[None, :]) % 8 < 4
+        rgba[blocked & stripe]  = [160,  20,  20, 210]
+        rgba[blocked & ~stripe] = [100,  10,  10, 180]
 
     buf = io.BytesIO()
     Image.fromarray(rgba, "RGBA").save(buf, "PNG")

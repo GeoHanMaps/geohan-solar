@@ -184,8 +184,8 @@ def generate(
         yasal_sc                       * w["yasal"]
     ).clip(0, 100).astype("float32")
 
-    # Hard block → skor sıfırla
-    score[hard_blk] = 0.0
+    # Hard block → özel değer (-1) → tiler'da kırmızı overlay
+    score[hard_blk] = -1.0
 
     # 8. Polygon dışını maskle
     tf = from_bounds(minx, miny, maxx, maxy, cols, rows)
