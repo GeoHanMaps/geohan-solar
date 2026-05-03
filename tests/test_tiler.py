@@ -10,7 +10,7 @@ from rasterio.transform import from_bounds
 from rasterio.crs import CRS
 
 from app.services.tiler import (
-    _tile_bounds, _rdylgn_rgba, _empty_tile, get_tile, _TILE_SIZE,
+    _tile_bounds, _score_rgba, _empty_tile, get_tile, _TILE_SIZE,
 )
 
 
@@ -53,41 +53,44 @@ class TestTileBounds:
         assert e > w
 
 
-# ─── _rdylgn_rgba ─────────────────────────────────────────────────────────────
+# ─── _score_rgba ──────────────────────────────────────────────────────────────
 
-class TestRdylgn:
-    def test_zero_is_red(self):
+class TestScoreRgba:
+    def test_zero_is_white(self):
         norm = np.array([[0.0]])
         valid = np.array([[True]])
-        rgba = _rdylgn_rgba(norm, valid)
-        assert rgba[0, 0, 0] == 220   # R max
-        assert rgba[0, 0, 1] == 0     # G = 0
+        rgba = _score_rgba(norm, valid)
+        assert rgba[0, 0, 0] == 255   # R = 255
+        assert rgba[0, 0, 1] == 255   # G = 255
+        assert rgba[0, 0, 2] == 255   # B = 255
         assert rgba[0, 0, 3] > 0      # görünür
+
+    def test_half_is_yellow(self):
+        norm = np.array([[0.5]])
+        valid = np.array([[True]])
+        rgba = _score_rgba(norm, valid)
+        assert rgba[0, 0, 0] == 255   # R = 255
+        assert rgba[0, 0, 1] == 255   # G = 255
+        assert rgba[0, 0, 2] == 0     # B = 0
 
     def test_one_is_green(self):
         norm = np.array([[1.0]])
         valid = np.array([[True]])
-        rgba = _rdylgn_rgba(norm, valid)
+        rgba = _score_rgba(norm, valid)
         assert rgba[0, 0, 0] == 0     # R = 0
-        assert rgba[0, 0, 1] == 180   # G max
-
-    def test_half_is_yellowish(self):
-        norm = np.array([[0.5]])
-        valid = np.array([[True]])
-        rgba = _rdylgn_rgba(norm, valid)
-        r, g = int(rgba[0, 0, 0]), int(rgba[0, 0, 1])
-        assert r > 100 and g > 100
+        assert rgba[0, 0, 1] == 200   # G = 200
+        assert rgba[0, 0, 2] == 0     # B = 0
 
     def test_invalid_pixel_transparent(self):
         norm = np.array([[0.5]])
         valid = np.array([[False]])
-        rgba = _rdylgn_rgba(norm, valid)
+        rgba = _score_rgba(norm, valid)
         assert rgba[0, 0, 3] == 0
 
     def test_output_shape(self):
         norm = np.zeros((4, 4))
         valid = np.ones((4, 4), dtype=bool)
-        rgba = _rdylgn_rgba(norm, valid)
+        rgba = _score_rgba(norm, valid)
         assert rgba.shape == (4, 4, 4)
 
 
