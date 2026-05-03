@@ -62,7 +62,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
-          fingerprint: "SHA256:GkmqxQgrboz/xc6etq+VXHZkGWWBSguYxG7GDteI/L0"
+          fingerprint: "3b:d2:f2:46:f0:85:49:a1:aa:5b:62:8c:7b:03:b4:74"
           script: |
             set -euo pipefail
             cd /home/geohan/geohan/geohan-solar
