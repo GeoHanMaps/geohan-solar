@@ -37,9 +37,12 @@ def _resolve_language(lang: str) -> str:
 
 
 def _score_label(score: float) -> str:
-    if score >= 80: return "Excellent"
-    if score >= 65: return "Good"
-    if score >= 45: return "Moderate"
+    if score >= 80:
+        return "Excellent"
+    if score >= 65:
+        return "Good"
+    if score >= 45:
+        return "Moderate"
     return "Weak"
 
 
