@@ -565,30 +565,11 @@ function loadHeatmap(mapId) {
 }
 
 function removeHeatmap() {
-  for (const id of ['constraint-icons', 'constraint-clusters', 'constraint-count'])
+  for (const id of ['constraint-labels', 'constraint-icons', 'constraint-count', 'constraint-clusters'])
     if (map.getLayer(id)) map.removeLayer(id);
   if (map.getSource('constraints')) map.removeSource('constraints');
   if (map.getLayer('heatmap-layer')) map.removeLayer('heatmap-layer');
   if (map.getSource('heatmap'))      map.removeSource('heatmap');
-}
-
-async function _ensureWarnImages() {
-  const defs = [
-    ['warn-hard', '#e53935'],
-    ['warn-soft', '#f57c00'],
-  ];
-  for (const [name, fill] of defs) {
-    if (map.hasImage(name)) continue;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-      <path d="M16 3 L30 29 L2 29 Z" fill="${fill}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-      <rect x="14.5" y="12" width="3" height="8" rx="1.5" fill="#fff"/>
-      <circle cx="16" cy="24" r="1.8" fill="#fff"/>
-    </svg>`;
-    const img = new Image(32, 32);
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    await new Promise(res => { img.onload = res; img.onerror = res; });
-    if (img.naturalWidth > 0) map.addImage(name, img, { sdf: false });
-  }
 }
 
 async function loadConstraints(mapId) {
@@ -597,8 +578,6 @@ async function loadConstraints(mapId) {
     if (!r.ok) return;
     const geojson = await r.json();
     if (!geojson.features || geojson.features.length === 0) return;
-
-    await _ensureWarnImages();
 
     map.addSource('constraints', {
       type: 'geojson', data: geojson,
@@ -616,49 +595,64 @@ async function loadConstraints(mapId) {
       },
     });
 
-    // Cluster count — use 'noto sans regular' which CartoDB style ships
+    // Cluster count (ASCII digits — every font supports them)
     map.addLayer({
       id: 'constraint-count', type: 'symbol', source: 'constraints',
       filter: ['has', 'point_count'],
       layout: {
         'text-field': ['get', 'point_count_abbreviated'],
-        'text-size': 12, 'text-font': ['Noto Sans Regular'],
-        'text-allow-overlap': true,
+        'text-size': 12,
+        'text-allow-overlap': true, 'text-ignore-placement': true,
       },
       paint: { 'text-color': '#fff' },
     });
 
-    // Individual icons
+    // Individual circles (no image needed — circle layer is always reliable)
     map.addLayer({
-      id: 'constraint-icons', type: 'symbol', source: 'constraints',
+      id: 'constraint-icons', type: 'circle', source: 'constraints',
       filter: ['!', ['has', 'point_count']],
-      layout: {
-        'icon-image': ['case', ['==', ['get', 'block_type'], 'hard'], 'warn-hard', 'warn-soft'],
-        'icon-size': 0.75, 'icon-allow-overlap': true, 'icon-anchor': 'center',
+      paint: {
+        'circle-color': ['case', ['==', ['get', 'block_type'], 'hard'], '#e53935', '#f57c00'],
+        'circle-radius': 9,
+        'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-opacity': 0.9,
       },
     });
 
-    map.on('click', 'constraint-clusters', async (e) => {
+    // '!' label on individual circles (ASCII — always renders)
+    map.addLayer({
+      id: 'constraint-labels', type: 'symbol', source: 'constraints',
+      filter: ['!', ['has', 'point_count']],
+      layout: {
+        'text-field': '!',
+        'text-size': 14,
+        'text-allow-overlap': true, 'text-ignore-placement': true,
+      },
+      paint: { 'text-color': '#fff' },
+    });
+
+    map.on('click', 'constraint-clusters', (e) => {
       const src = map.getSource('constraints');
       const cid = e.features[0].properties.cluster_id;
-      const zoom = await src.getClusterExpansionZoom(cid);
-      map.easeTo({ center: e.features[0].geometry.coordinates, zoom });
+      src.getClusterExpansionZoom(cid, (err, zoom) => {
+        if (!err) map.easeTo({ center: e.features[0].geometry.coordinates, zoom });
+      });
     });
 
     map.on('click', 'constraint-icons', (e) => {
       const p = e.features[0].properties;
-      const color = p.block_type === 'hard' ? '#e53935' : '#f57c00';
-      const label = p.block_type === 'hard' ? 'YASAKLI ALAN' : 'İZNE TABİ ALAN';
-      new maplibregl.Popup({ maxWidth: '280px' })
+      const isHard = p.block_type === 'hard';
+      const color = isHard ? '#e53935' : '#f57c00';
+      const label = isHard ? '🚫 YASAKLI ALAN' : '⚠ İZNE TABİ ALAN';
+      new maplibregl.Popup({ maxWidth: '300px' })
         .setLngLat(e.lngLat)
-        .setHTML(`<div style="font-family:system-ui;font-size:13px;line-height:1.6;padding:2px 0">
-          <b style="color:${color};font-size:14px">${label}</b><br>
-          <span style="color:#555">${p.reason}</span>
+        .setHTML(`<div style="font-family:system-ui;font-size:13px;line-height:1.7">
+          <b style="color:${color};font-size:14px;display:block;margin-bottom:4px">${label}</b>
+          ${p.reason || 'Kısıtlı alan'}
         </div>`)
         .addTo(map);
     });
 
-    for (const id of ['constraint-clusters', 'constraint-icons']) {
+    for (const id of ['constraint-clusters', 'constraint-icons', 'constraint-labels']) {
       map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; });
     }
