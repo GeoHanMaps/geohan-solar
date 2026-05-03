@@ -115,7 +115,8 @@ def _run_generate(**kwargs):
         patch("app.services.heatmap.access_svc.nearest_road_km", return_value=0.4),
     ):
         from app.services.heatmap import generate
-        return generate(POLYGON, resolution_m=250, **kwargs)
+        tiff, _ = generate(POLYGON, resolution_m=250, **kwargs)
+        return tiff
 
 
 class TestGenerate:
@@ -148,7 +149,7 @@ class TestGenerate:
             patch("app.services.heatmap.access_svc.nearest_road_km", return_value=0.4),
         ):
             from app.services.heatmap import generate
-            tiff = generate(POLYGON, resolution_m=250)
+            tiff, _ = generate(POLYGON, resolution_m=250)
 
         with rasterio.open(io.BytesIO(tiff)) as src:
             data = src.read(1)
@@ -172,5 +173,6 @@ class TestGenerate:
             patch("app.services.heatmap.access_svc.nearest_road_km", return_value=0.4),
         ):
             from app.services.heatmap import generate
-            result = generate(POLYGON, resolution_m=250)
+            result, constraints = generate(POLYGON, resolution_m=250)
         assert isinstance(result, bytes)
+        assert '"FeatureCollection"' in constraints

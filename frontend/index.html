@@ -561,11 +561,56 @@ function loadHeatmap(mapId) {
     id: 'heatmap-layer', type: 'raster', source: 'heatmap',
     paint: { 'raster-opacity': 0.70 },
   }, 'polygon-fill');
+  loadConstraints(mapId);
 }
 
 function removeHeatmap() {
-  if (map.getLayer('heatmap-layer')) map.removeLayer('heatmap-layer');
-  if (map.getSource('heatmap'))      map.removeSource('heatmap');
+  if (map.getLayer('constraint-icons'))  map.removeLayer('constraint-icons');
+  if (map.getSource('constraints'))      map.removeSource('constraints');
+  if (map.getLayer('heatmap-layer'))     map.removeLayer('heatmap-layer');
+  if (map.getSource('heatmap'))          map.removeSource('heatmap');
+}
+
+async function loadConstraints(mapId) {
+  try {
+    const r = await apiFetch(`/api/v1/maps/${mapId}/constraints`);
+    if (!r.ok) return;
+    const geojson = await r.json();
+    if (!geojson.features || geojson.features.length === 0) return;
+
+    map.addSource('constraints', { type: 'geojson', data: geojson });
+    map.addLayer({
+      id: 'constraint-icons',
+      type: 'symbol',
+      source: 'constraints',
+      layout: {
+        'text-field': '⚠',
+        'text-size': 16,
+        'text-allow-overlap': false,
+        'text-anchor': 'center',
+      },
+      paint: {
+        'text-color': ['case', ['==', ['get', 'block_type'], 'hard'], '#ff2222', '#ff8800'],
+        'text-halo-color': '#111',
+        'text-halo-width': 1.5,
+      },
+    });
+
+    map.on('click', 'constraint-icons', (e) => {
+      const p = e.features[0].properties;
+      const color = p.block_type === 'hard' ? '#e53935' : '#f57c00';
+      const label = p.block_type === 'hard' ? '🚫 YASAKLI ALAN' : '⚠ İZNE TABİ ALAN';
+      new maplibregl.Popup({ maxWidth: '260px' })
+        .setLngLat(e.lngLat)
+        .setHTML(`<div style="font-family:system-ui;font-size:13px;line-height:1.5">
+          <b style="color:${color}">${label}</b><br>
+          <span style="color:#ccc">${p.reason}</span>
+        </div>`)
+        .addTo(map);
+    });
+    map.on('mouseenter', 'constraint-icons', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'constraint-icons', () => { map.getCanvas().style.cursor = ''; });
+  } catch { /* sessiz hata — opsiyonel katman */ }
 }
 
 function updateOpacity(v) {

@@ -86,6 +86,24 @@ def get_tile(map_id: str, z: int, x: int, y: int,
                     headers={"Cache-Control": "public, max-age=3600"})
 
 
+@router_maps.get("/{map_id}/constraints", summary="Yasal kısıt noktaları (GeoJSON)")
+def get_constraints(map_id: str, _: str = Depends(get_current_user)):
+    job = store.get(map_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Map job bulunamadı")
+    if job["status"] != "done":
+        raise HTTPException(status_code=425, detail="Harita henüz hazır değil")
+
+    cp = job["result"].get("constraint_path")
+    if not cp or not Path(cp).exists():
+        return Response(
+            content='{"type":"FeatureCollection","features":[]}',
+            media_type="application/json",
+        )
+    return Response(content=Path(cp).read_text(), media_type="application/json",
+                    headers={"Cache-Control": "public, max-age=3600"})
+
+
 @router_maps.get("/{map_id}/geotiff", summary="Ham GeoTIFF indir")
 def get_geotiff(map_id: str, _: str = Depends(get_current_user)):
     job = store.get(map_id)

@@ -20,12 +20,61 @@ from rasterio.transform import from_bounds
 from rasterio.crs import CRS
 from rasterio.features import geometry_mask
 
+from rasterio.features import shapes as _rasterio_shapes
+
 from app.services import solar, grid as grid_svc, access as access_svc
 from app.services.mcda import LC_SCORE, get_weights
 
 _NODATA = -9999.0
 _GLOBAL_HARD_LC = {70, 80, 90, 95}  # kar/buz, su, sulak alan, mangrov
 _SOFT_BLOCK_SCORE = 25.0             # soft block alanlar için LC skoru
+
+_LC_REASONS: dict[int, tuple[str, str]] = {
+    10: ("Orman Alanı (Küresel Koruma)", "hard"),
+    40: ("Tarım Arazisi (5403 Sayılı Kanun)", "hard"),
+    50: ("Yerleşim / Sanayi Alanı", "hard"),
+    70: ("Kar / Buz Alanı", "hard"),
+    80: ("Su Yüzeyi", "hard"),
+    90: ("Sulak Alan", "hard"),
+    95: ("Mangrov Alanı", "hard"),
+    20: ("İzne Tabi Alan — Makilik (Zeytinlik olabilir)", "soft"),
+    30: ("İzne Tabi Alan — Çayır / Mera", "soft"),
+}
+
+
+def _constraint_geojson(
+    lc: np.ndarray,
+    hard_blk: np.ndarray,
+    soft_blk: np.ndarray,
+    transform,
+    all_hard_lc: set,
+    soft_block_lc: set,
+) -> str:
+    combined = hard_blk | soft_blk
+    if not combined.any():
+        return '{"type":"FeatureCollection","features":[]}'
+
+    features = []
+    for code in np.unique(lc[combined]):
+        code_int = int(code)
+        reason, btype = _LC_REASONS.get(
+            code_int, (f"Kısıtlı Alan (ESA Sınıf {code_int})", "hard")
+        )
+        mask = (lc == code_int).astype(np.uint8)
+        for geom_dict, val in _rasterio_shapes(mask, transform=transform):
+            if val != 1:
+                continue
+            geom = shape(geom_dict)
+            if not geom.is_valid or geom.is_empty:
+                continue
+            c = geom.centroid
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [round(c.x, 5), round(c.y, 5)]},
+                "properties": {"reason": reason, "lc_code": code_int, "block_type": btype},
+            })
+
+    return json.dumps({"type": "FeatureCollection", "features": features})
 
 _RULES_PATH = Path(__file__).parents[2] / "config" / "country_rules.json"
 
@@ -232,4 +281,6 @@ def generate(
         dst.write(score, 1)
 
     buf.seek(0)
-    return buf.read()
+    tiff_bytes = buf.read()
+    constraint_json = _constraint_geojson(lc, hard_blk, soft_blk, tf, all_hard_lc, soft_block_lc)
+    return tiff_bytes, constraint_json

@@ -198,7 +198,7 @@ def map_task(self, map_id: str, req_data: dict) -> None:
     req = MapRequest(**req_data)
     store.set_running(map_id)
     try:
-        tiff_bytes = heatmap.generate(
+        tiff_bytes, constraint_json = heatmap.generate(
             polygon_geojson=req.geom,
             resolution_m=req.resolution_m,
             panel_tech=req.panel_tech,
@@ -208,17 +208,21 @@ def map_task(self, map_id: str, req_data: dict) -> None:
 
         maps_dir = Path(settings.maps_data_dir)
         maps_dir.mkdir(parents=True, exist_ok=True)
-        tiff_path = str(maps_dir / f"{map_id}.tif")
+        tiff_path        = str(maps_dir / f"{map_id}.tif")
+        constraint_path  = str(maps_dir / f"{map_id}_constraints.geojson")
 
         with open(tiff_path, "wb") as f:
             f.write(tiff_bytes)
+        with open(constraint_path, "w") as f:
+            f.write(constraint_json)
 
         with rasterio.open(tiff_path) as src:
             data = src.read(1)
 
         valid = data[(data > 0) & (data <= 100)]
         store.set_done(map_id, {
-            "tiff_path":  tiff_path,
+            "tiff_path":       tiff_path,
+            "constraint_path": constraint_path,
             "score_min":  float(valid.min())  if len(valid) else 0.0,
             "score_max":  float(valid.max())  if len(valid) else 0.0,
             "score_mean": float(valid.mean()) if len(valid) else 0.0,
