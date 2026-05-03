@@ -11,6 +11,7 @@ Yöntem:
 
 import io
 import json
+import math
 import numpy as np
 import ee
 from pathlib import Path
@@ -85,6 +86,22 @@ def _country_rules(country_code: str) -> dict:
         return rules.get(country_code, rules.get("DEFAULT", {}))
     except Exception:
         return {}
+
+
+_MAX_GEE_PIXELS = 250_000  # GEE limiti 262144, güvenli marj
+
+
+def _auto_resolution(minx: float, miny: float, maxx: float, maxy: float,
+                     resolution_m: int) -> int:
+    lat_c = (miny + maxy) / 2
+    rows = (maxy - miny) * 111_000 / resolution_m
+    cols = (maxx - minx) * 111_000 * math.cos(math.radians(lat_c)) / resolution_m
+    pixels = rows * cols
+    if pixels > _MAX_GEE_PIXELS:
+        factor = math.sqrt(pixels / _MAX_GEE_PIXELS)
+        resolution_m = int(resolution_m * factor)
+        resolution_m = math.ceil(resolution_m / 100) * 100  # 100m'nin katına yuvarla
+    return max(resolution_m, 250)
 
 
 def _utm_epsg(lat: float, lon: float) -> int:
@@ -199,6 +216,9 @@ def generate(
     minx, miny, maxx, maxy = geom.bounds
     lat_c = (miny + maxy) / 2
     lon_c = (minx + maxx) / 2
+
+    # GEE piksel limitine göre çözünürlüğü otomatik ayarla
+    resolution_m = _auto_resolution(minx, miny, maxx, maxy, resolution_m)
 
     # 1. Terrain (GEE)
     slope_deg, aspect_deg, lc = _terrain_raster(minx, miny, maxx, maxy, resolution_m)
