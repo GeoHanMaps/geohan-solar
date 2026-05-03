@@ -565,10 +565,30 @@ function loadHeatmap(mapId) {
 }
 
 function removeHeatmap() {
-  if (map.getLayer('constraint-icons'))  map.removeLayer('constraint-icons');
-  if (map.getSource('constraints'))      map.removeSource('constraints');
-  if (map.getLayer('heatmap-layer'))     map.removeLayer('heatmap-layer');
-  if (map.getSource('heatmap'))          map.removeSource('heatmap');
+  for (const id of ['constraint-icons', 'constraint-clusters', 'constraint-count'])
+    if (map.getLayer(id)) map.removeLayer(id);
+  if (map.getSource('constraints')) map.removeSource('constraints');
+  if (map.getLayer('heatmap-layer')) map.removeLayer('heatmap-layer');
+  if (map.getSource('heatmap'))      map.removeSource('heatmap');
+}
+
+async function _ensureWarnImages() {
+  const defs = [
+    ['warn-hard', '#e53935'],
+    ['warn-soft', '#f57c00'],
+  ];
+  for (const [name, fill] of defs) {
+    if (map.hasImage(name)) continue;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+      <path d="M16 3 L30 29 L2 29 Z" fill="${fill}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="14.5" y="12" width="3" height="8" rx="1.5" fill="#fff"/>
+      <circle cx="16" cy="24" r="1.8" fill="#fff"/>
+    </svg>`;
+    const img = new Image(32, 32);
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    await new Promise(res => { img.onload = res; img.onerror = res; });
+    if (img.naturalWidth > 0) map.addImage(name, img, { sdf: false });
+  }
 }
 
 async function loadConstraints(mapId) {
@@ -578,39 +598,71 @@ async function loadConstraints(mapId) {
     const geojson = await r.json();
     if (!geojson.features || geojson.features.length === 0) return;
 
-    map.addSource('constraints', { type: 'geojson', data: geojson });
+    await _ensureWarnImages();
+
+    map.addSource('constraints', {
+      type: 'geojson', data: geojson,
+      cluster: true, clusterMaxZoom: 13, clusterRadius: 48,
+    });
+
+    // Cluster circle
     map.addLayer({
-      id: 'constraint-icons',
-      type: 'symbol',
-      source: 'constraints',
-      layout: {
-        'text-field': '⚠',
-        'text-size': 16,
-        'text-allow-overlap': false,
-        'text-anchor': 'center',
-      },
+      id: 'constraint-clusters', type: 'circle', source: 'constraints',
+      filter: ['has', 'point_count'],
       paint: {
-        'text-color': ['case', ['==', ['get', 'block_type'], 'hard'], '#ff2222', '#ff8800'],
-        'text-halo-color': '#111',
-        'text-halo-width': 1.5,
+        'circle-color': '#e53935',
+        'circle-radius': ['step', ['get', 'point_count'], 14, 20, 18, 100, 22],
+        'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-opacity': 0.85,
       },
+    });
+
+    // Cluster count — use 'noto sans regular' which CartoDB style ships
+    map.addLayer({
+      id: 'constraint-count', type: 'symbol', source: 'constraints',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': ['get', 'point_count_abbreviated'],
+        'text-size': 12, 'text-font': ['Noto Sans Regular'],
+        'text-allow-overlap': true,
+      },
+      paint: { 'text-color': '#fff' },
+    });
+
+    // Individual icons
+    map.addLayer({
+      id: 'constraint-icons', type: 'symbol', source: 'constraints',
+      filter: ['!', ['has', 'point_count']],
+      layout: {
+        'icon-image': ['case', ['==', ['get', 'block_type'], 'hard'], 'warn-hard', 'warn-soft'],
+        'icon-size': 0.75, 'icon-allow-overlap': true, 'icon-anchor': 'center',
+      },
+    });
+
+    map.on('click', 'constraint-clusters', async (e) => {
+      const src = map.getSource('constraints');
+      const cid = e.features[0].properties.cluster_id;
+      const zoom = await src.getClusterExpansionZoom(cid);
+      map.easeTo({ center: e.features[0].geometry.coordinates, zoom });
     });
 
     map.on('click', 'constraint-icons', (e) => {
       const p = e.features[0].properties;
       const color = p.block_type === 'hard' ? '#e53935' : '#f57c00';
-      const label = p.block_type === 'hard' ? '🚫 YASAKLI ALAN' : '⚠ İZNE TABİ ALAN';
-      new maplibregl.Popup({ maxWidth: '260px' })
+      const label = p.block_type === 'hard' ? 'YASAKLI ALAN' : 'İZNE TABİ ALAN';
+      new maplibregl.Popup({ maxWidth: '280px' })
         .setLngLat(e.lngLat)
-        .setHTML(`<div style="font-family:system-ui;font-size:13px;line-height:1.5">
-          <b style="color:${color}">${label}</b><br>
-          <span style="color:#ccc">${p.reason}</span>
+        .setHTML(`<div style="font-family:system-ui;font-size:13px;line-height:1.6;padding:2px 0">
+          <b style="color:${color};font-size:14px">${label}</b><br>
+          <span style="color:#555">${p.reason}</span>
         </div>`)
         .addTo(map);
     });
-    map.on('mouseenter', 'constraint-icons', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 'constraint-icons', () => { map.getCanvas().style.cursor = ''; });
-  } catch { /* sessiz hata — opsiyonel katman */ }
+
+    for (const id of ['constraint-clusters', 'constraint-icons']) {
+      map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; });
+    }
+  } catch(err) { console.warn('Constraint layer error:', err); }
 }
 
 function updateOpacity(v) {
