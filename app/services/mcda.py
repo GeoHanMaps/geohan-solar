@@ -83,8 +83,7 @@ def score(
     }
 
     if hard_block:
-        zeroed = {k: 0 for k in scores}
-        return {"scores": zeroed, "weights": weights, "total": 0.0}
+        return {"scores": scores, "weights": weights, "total": 0.0, "hard_block": True}
 
     total = sum(scores[k] * weights[k] for k in scores)
     return {"scores": scores, "weights": weights, "total": round(total, 1)}

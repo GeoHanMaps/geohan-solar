@@ -75,7 +75,9 @@ class TestScore:
             yasal_score=f["yasal_score"], hard_block=f["hard_block"],
         )
         assert result["total"] == 0.0
-        assert all(v == 0 for v in result["scores"].values())
+        assert result.get("hard_block") is True
+        # Bireysel skorlar hâlâ hesaplanmış olmalı (bilgi amaçlı)
+        assert any(v > 0 for v in result["scores"].values())
 
     def test_weights_sum_to_one(self):
         total = sum(mcda.get_weights().values())

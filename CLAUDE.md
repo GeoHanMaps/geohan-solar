@@ -4,17 +4,16 @@ Global GES yatırım skoru SaaS platformu.
 
 ## Sunucu
 - IP: 178.104.69.28
-- User: geohan
+- User: geohan (sudo yetkili)
 - Path: /home/geohan/geohan/geohan-solar
-- SSH: `ssh geohan@178.104.69.28`
-- Root SSH da çalışır (deploy için)
-- Auth: `admin` / `6383426Md-17`
+- SSH: `ssh geohan@178.104.69.28` (key-based; root SSH kapalı)
+- API şifresi Bitwarden/1Password'da
 
 ## Stack
 - FastAPI + Celery + Redis (Docker Compose)
 - PostgreSQL/PostGIS yok (henüz), cache JSON dosya tabanlı
-- Nginx port 80'de reverse proxy (host üzerinde, Docker dışı)
-- API health: http://178.104.69.28/api/v1/health
+- Nginx port 80+443 reverse proxy (host üzerinde, Docker dışı; SSL Let's Encrypt)
+- API health: https://geohanmaps.com/api/v1/health
 
 ## Komutlar
 ```bash
@@ -27,51 +26,51 @@ cd /home/geohan/geohan/geohan-solar && docker compose up -d --build
 # Log izle
 docker compose logs -f api
 
-# Token al (test için)
+# Token al (test için) — şifreyi .env veya Bitwarden'dan al
 curl -s -X POST http://localhost:8000/api/v1/auth/token \
-  -d 'username=admin&password=6383426Md-17' | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])'
+  -d 'username=admin&password=<PASSWORD>' | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])'
 
 # Analiz gönder
 curl -s -X POST http://localhost:8000/api/v1/analyses \
   -H 'Content-Type: application/json' -H 'Authorization: Bearer <TOKEN>' \
   -d '{"lat":37.87,"lon":32.49,"country_code":"TR","area_ha":100}'
+
+# GEE credentials kopyala (rebuild sonrası gerekebilir)
+docker cp ~/.config/earthengine/credentials \
+  $(docker compose ps -q api):/home/geohan/.config/earthengine/credentials
+docker compose restart api worker
 ```
 
 ## GitHub
 - Repo: https://github.com/GeoHanMaps/geohan-solar
 - CD: main'e push → otomatik build + deploy (GitHub Actions)
-- **Secrets eksik:** DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY — henüz eklenmedi, deploy manuel
+- Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY ✓
 
-## Mevcut Durum (2026-05-02)
+## Mevcut Durum (2026-05-07)
 
 ### Çalışan Servisler
-- API: http://178.104.69.28/api/v1/health → `{"status":"ok","gee":"ok","osm":"ok"}`
+- API: https://geohanmaps.com/api/v1/health → `{"status":"ok","gee":"error","osm":"ok"}`
 - Celery worker, Redis: çalışıyor
-- GEE: `ok` (credentials kopyalandı)
+- GEE: **error** — credentials yeniden kopyalanması gerekiyor
 
 ### Tamamlanan İşler
 - **MCDA skor motoru:** 8 kriter, ağırlıklı (slope/GHI/aspect/shadow/LC/grid/road/legal)
 - **Ülke kural motoru:** `config/country_rules.json` — 20+ ülke (TR,DE,ES,FR,SA,ML,NE…)
 - **Finansal model v2:** `app/services/financial.py`
-  - IRR: 25 yıllık NPV bisection (eski `1/payback - WACC` formülü kaldırıldı)
+  - IRR: 25 yıllık NPV bisection
   - OPEX: EPC × %1.5/MW/yıl dahil
-  - PPA: auction bid değil, piyasa/bilateral fiyatlar
+  - PPA: piyasa/bilateral fiyatlar
   - Payback: USD cinsinden (kur bağımsız)
-- **Grid mesafesi fix:** `app/services/grid.py`
-  - OSM 100km radius ile gerçek substation ara
-  - Bulamazsa `grid_reliability`'den tahmin: `3 + 95×(1-r)^0.7`
-  - TR→24.5km (OSM), DE→4.2km (OSM), ML→65.5km (OSM)
-- **Voltaj eşiği fix:**
-  - TR: `hv_threshold_mw` 50→150 (85MW proje 154kV'a düşer, 380kV değil)
-  - ML/NE/NG/CD: `hv_threshold=999` (bu ülkelerde 380kV hat yok)
+- **Grid mesafesi fix:** OSM 100km radius, reliability fallback
 - **country_costs.json:** 50+ ülke, PPA/EPC/grid maliyet/reliability
-- **Benchmark verisi:** `data/benchmark/` — IRENA LCOE 2024, USPVDB özet, OSM solar (TR/SA)
 - **Heatmap modülü:** polygon → MCDA raster → XYZ tile (premium)
 - **Batch analiz:** 50 lokasyona kadar toplu analiz
-- **PDF rapor:** `/api/v1/analyses/{id}/report`
-- **Frontend:** `frontend/index.html` — MapLibre GL, polygon çiz, heatmap overlay
+- **PDF rapor + AI narrative:** Claude Haiku entegrasyonu
+- **CI/CD:** GitHub Actions — lint + test + deploy + rollback
+- **SSL + domain:** geohanmaps.com, Let's Encrypt (2026-08-01'e kadar)
+- **Güvenlik sertleştirme:** fail2ban, UFW, SSH hardening, bandit 0 issue
 
-### 6 Ülke Kıyaslama (100ha · Mono · Fixed · son durum)
+### 6 Ülke Kıyaslama (100ha · Mono · Fixed)
 | Ülke | Skor | Grid | Voltaj | Payback | IRR |
 |------|------|------|--------|---------|-----|
 | TR Konya | 60.9 | 24.5km | 154kV | 18.3yr | 2.6% |
@@ -81,17 +80,6 @@ curl -s -X POST http://localhost:8000/api/v1/analyses \
 | IN Ahmedabad | 61.7 | 33.8km | 154kV | 9.7yr | 9.2% |
 | AU Perth | 57.5 | 6.8km | 380kV | 20.6yr | 1.5% |
 | DE Stuttgart | 0.0 | 4.2km | — | hard block | — |
-
-> ML/NE yüksek IRR: off-grid diesel yerine geçme ($0.13-0.15/kWh PPA).
-> DE hard block: cropland (ESA LC=40), Almanya'da GES yasak.
-
-### Bekleyen İşler (öncelik sırasıyla)
-1. **GitHub Actions secrets** ekle → otomatik CD aktif olsun
-   - `DEPLOY_HOST=178.104.69.28`, `DEPLOY_USER=root`, `DEPLOY_SSH_KEY=<private key>`
-2. **Frontend test** — MapLibre UI'da polygon çiz → heatmap çalışıyor mu?
-3. **OSM veri tamamlama** — DE/IN/ZA solar farm geojson'ları henüz indirilmedi
-4. **GEE credentials kalıcı hale getir** — docker rebuild'de kayboluyor
-5. **SA/AU IRR iyileştirme** — EPC kalibrasyonu veya PPA revizyon
 
 ## Mimari Özet
 
@@ -110,10 +98,11 @@ POST /api/v1/maps  →  Celery map_task  →  GeoTIFF → XYZ tiles
 ## Kritik Notlar
 - `richdem` Python 3.11 uyumsuz — requirements.txt'ten çıkarıldı
 - CORS_ORIGINS .env'de string: `*` veya `a.com,b.com` veya `["a.com"]`
-- GEE credentials: docker rebuild'den sonra yeniden kopyalanması gerekiyor
-- `.env` dosyası sunucuda `/home/geohan/geohan/geohan-solar/.env`
+- GEE credentials: docker rebuild'den sonra yeniden kopyalanması gerekebilir (volume bozulursa)
+- `.env` dosyası sunucuda `/home/geohan/geohan/geohan-solar/.env` (chmod 600)
 - `irr_estimate` API'de **yüzde** olarak döner (8.3 = %8.3, 0.083 değil)
 - Overpass rate limit: ülkeler arası 90s bekle
+- Solar pipeline: GSA kullanılmıyor (lisans alınmadı). CAMS→PVGIS→Open-Meteo→NASA POWER
 
 ## Dosya Haritası (kritik)
 ```
@@ -122,10 +111,11 @@ app/
     financial.py   — IRR bisection, OPEX, ülke maliyetleri
     grid.py        — OSM substation + reliability fallback
     terrain.py     — GEE slope/aspect/LC
-    solar.py       — GEE GHI
+    solar.py       — çok-kaynaklı GHI (CAMS/NSRDB/PVGIS/Open-Meteo/NASA POWER)
     mcda.py        — 8 kriter skoru
     capacity.py    — MW/ha hesabı
     legal.py       — ülke kural motoru
+    narrative.py   — Claude Haiku AI yorum
   routers/
     analyses.py    — POST/GET /analyses
     maps.py        — heatmap + tiles

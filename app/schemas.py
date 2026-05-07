@@ -102,6 +102,7 @@ class AnalysisResult(BaseModel):
     area_ha:     float
     utm_zone:    int
     total_score: float
+    hard_block:  bool = False
     breakdown:   ScoreBreakdown
     capacity:    CapacityResult
     financial:   FinancialResult
