@@ -15,6 +15,9 @@ TRACKING_CFG = {
 }
 
 
+SITE_UTIL = 0.70  # roads, transformers, buffer zones ~30% of land (Karapınar 1.35GW/2200ha → 0.61 MW/ha)
+
+
 def calculate(
     slope_pct: float,
     ghi_annual: float,
@@ -27,9 +30,8 @@ def calculate(
     t = TRACKING_CFG[tracking]
 
     gcr = gcr_override or t["gcr"]
-    terrain_factor  = math.cos(math.radians(math.atan(slope_pct / 100)))
-    row_spacing_fac = max(0.5, 1 - (slope_pct / 100) * 0.5)
-    effective_gcr   = gcr * terrain_factor * row_spacing_fac
+    terrain_factor = math.cos(math.atan(slope_pct / 100))  # horizontal area loss on slope
+    effective_gcr  = gcr * terrain_factor * SITE_UTIL
 
     yield_factor = t["yield_factor"]
     if tracking == TrackingType.single_axis and slope_pct > t["max_slope_pct"]:
