@@ -9,7 +9,6 @@ _COUNTRY_COSTS_FILE = Path(__file__).parent.parent.parent / "config" / "country_
 _country_data: dict = {}
 
 PROJECT_LIFE_YEARS = 25
-_OPEX_PCT_OF_EPC = 0.015   # 1.5 % of EPC/MW/year (solar O&M benchmark)
 
 
 def _load_country_data() -> dict:
@@ -155,7 +154,7 @@ def calculate(
     annual_revenue_tl = annual_revenue_usd * usd_tl
 
     # Annual O&M cost
-    opex_usd_per_mw_yr = cfg.get("opex_usd_per_mw_year", epc_per_mw * _OPEX_PCT_OF_EPC)
+    opex_usd_per_mw_yr = cfg.get("opex_usd_per_mw_year", 7_000)
     annual_opex_usd = total_mw * opex_usd_per_mw_yr
 
     # Payback in USD terms (independent of exchange rate)
@@ -167,18 +166,23 @@ def calculate(
     irr_pct = round(irr_raw * 100, 1)   # stored as %, e.g. 8.3 for 8.3%
 
     return {
-        "country_code":          country_code.upper(),
-        "country_name":          cfg.get("name", country_code),
-        "usd_tl":                round(usd_tl, 2),
-        "epc_per_mw_usd":        epc_per_mw,
-        "base_investment_usd":   round(base_investment_usd, 0),
-        "grid_connection":       grid_cost,
-        "logistics":             logistics,
-        "total_investment_usd":  round(total_investment_usd, 0),
-        "total_investment_tl":   round(total_investment_tl, 0),
-        "annual_revenue_tl":     round(annual_revenue_tl, 0),
-        "financing_rate":        financing_rate,
-        "payback_years":         round(payback, 1),
-        "irr_estimate":          irr_pct,
-        "grid_reliability":      cfg.get("grid_reliability", 0.75),
+        "country_code":             country_code.upper(),
+        "country_name":             cfg.get("name", country_code),
+        "usd_tl":                   round(usd_tl, 2),
+        "epc_per_mw_usd":           epc_per_mw,
+        "base_investment_usd":      round(base_investment_usd, 0),
+        "grid_connection":          grid_cost,
+        "logistics":                logistics,
+        "total_investment_usd":     round(total_investment_usd, 0),
+        "total_investment_tl":      round(total_investment_tl, 0),
+        "ppa_usd_per_kwh":          ppa_usd,
+        "annual_revenue_usd":       round(annual_revenue_usd, 0),
+        "annual_revenue_tl":        round(annual_revenue_tl, 0),
+        "opex_usd_per_mw_year":     opex_usd_per_mw_yr,
+        "annual_opex_usd":          round(annual_opex_usd, 0),
+        "net_annual_cashflow_usd":  round(net_annual_usd, 0),
+        "financing_rate":           financing_rate,
+        "payback_years":            round(payback, 1),
+        "irr_estimate":             irr_pct,
+        "grid_reliability":         cfg.get("grid_reliability", 0.75),
     }

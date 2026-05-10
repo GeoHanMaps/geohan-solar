@@ -135,6 +135,169 @@ def _score_summary_table(total_score: float) -> Table:
     return t
 
 
+C_SECTION  = colors.HexColor("#EBF5FB")
+C_TOTAL    = colors.HexColor("#D5E8D4")
+C_RED_BG   = colors.HexColor("#FDEDEC")
+C_ORANGE_BG= colors.HexColor("#FEF9E7")
+C_GREEN_BG = colors.HexColor("#EAFAF1")
+
+
+def _financial_breakdown_table(fin: dict, cap: dict) -> Table:
+    """Kalem kalem yatırım, gelir, gider ve geri dönüş tablosu."""
+    total_mw   = cap["total_mw"]
+    annual_gwh = cap["annual_gwh"]
+    gc         = fin["grid_connection"]
+    log        = fin["logistics"]
+
+    cf_pct = round(annual_gwh * 1_000 / (total_mw * 8_760) * 100, 1) if total_mw > 0 else 0
+
+    def usd(v):  return f"${v:,.0f}"
+    def tl(v):   return f"₺{v:,.0f}"
+
+    def row(label, calc, amount, bold=False, section=False, total=False):
+        s_lbl = _style("fl", size=9, bold=bold or section, color=C_BLUE if section else colors.black)
+        s_cal = _style("fc", size=8, color=colors.HexColor("#7F8C8D"))
+        s_amt = _style("fa", size=9, bold=bold or total, align="RIGHT",
+                       color=C_GREEN if total else (C_BLUE if section else colors.black))
+        return [
+            Paragraph(label, s_lbl),
+            Paragraph(calc,  s_cal),
+            Paragraph(amount, s_amt),
+        ]
+
+    def section_row(title):
+        s = _style("fs", size=9, bold=True, color=C_BLUE)
+        return [Paragraph(title, s), Paragraph("", s), Paragraph("", s)]
+
+    header = [
+        Paragraph("KALEM",     _style("fh", size=8, bold=True, color=C_WHITE)),
+        Paragraph("HESAPLAMA", _style("fh", size=8, bold=True, color=C_WHITE)),
+        Paragraph("TUTAR",     _style("fh", size=8, bold=True, color=C_WHITE, align="RIGHT")),
+    ]
+
+    epc_label = f"EPC (panel + inverter + inşaat)"
+    epc_calc  = f"{total_mw:.1f} MW × ${fin['epc_per_mw_usd']:,.0f}/MW"
+    gc_label  = f"Şebeke bağlantısı ({gc['voltage_level'].upper()}, {gc['line_km']} km)"
+    gc_calc   = f"Hat: {usd(gc['line_cost_usd'])}  +  Trafo: {usd(gc['substation_cost_usd'])}"
+    log_label = f"Lojistik & yol ({log['road_km']} km, {log['truck_trips']} sefer)"
+    log_calc  = f"Yakıt: {tl(log['fuel_cost_tl'])}  +  Yol: {tl(log['road_improvement_tl'])}"
+
+    rev_calc  = (f"{annual_gwh:.1f} GWh × ${fin['ppa_usd_per_kwh']}/kWh")
+    cf_calc   = (f"{total_mw:.1f} MW × %{cf_pct} kapasite faktörü × 8,760h")
+    opex_calc = (f"{total_mw:.1f} MW × ${fin['opex_usd_per_mw_year']:,}/MW/yıl")
+    pb_calc   = (f"{usd(fin['total_investment_usd'])} ÷ {usd(fin['net_annual_cashflow_usd'])}/yıl")
+
+    rows = [
+        header,
+        section_row("YATIRIM MALİYETİ (CAPEX)"),
+        row(f"  {epc_label}",  epc_calc, usd(fin["base_investment_usd"])),
+        row(f"  {gc_label}",   gc_calc,  usd(gc["total_usd"])),
+        row(f"  {log_label}",  log_calc, tl(log["total_tl"])),
+        row("  TOPLAM CAPEX (USD)", "", usd(fin["total_investment_usd"]), bold=True, total=True),
+        section_row("YILLIK GELİR"),
+        row("  Yıllık üretim",  cf_calc,  f"{annual_gwh:.1f} GWh"),
+        row("  PPA fiyatı",        "",       f"${fin['ppa_usd_per_kwh']}/kWh"),
+        row("  YILLIK BRÜT GELİR", rev_calc, usd(fin["annual_revenue_usd"]), bold=True, total=True),
+        section_row("YILLIK GİDERLER (OPEX)"),
+        row("  O&M (işletme & bakım)", opex_calc, usd(fin["annual_opex_usd"])),
+        section_row("GERİ DÖNÜŞ"),
+        row("  Net yıllık nakit akışı", "Brüt gelir − O&M",
+            usd(fin["net_annual_cashflow_usd"]), bold=True),
+        row("  Geri ödeme süresi",    pb_calc,   f"{fin['payback_years']:.1f} yıl"),
+        row("  IRR (25 yıl projeksiyonu)", "Bisection NPV=0", f"%{fin['irr_estimate']}", bold=True, total=True),
+    ]
+
+    col_w = [5.5*cm, 6.5*cm, 4.5*cm]
+    t = Table(rows, colWidths=col_w)
+
+    section_indices = [1, 6, 10, 12]
+    total_indices   = [5, 9, 15]
+
+    style_cmds = [
+        ("BACKGROUND",    (0, 0),  (-1, 0),   C_BLUE),
+        ("TEXTCOLOR",     (0, 0),  (-1, 0),   C_WHITE),
+        ("FONTSIZE",      (0, 0),  (-1, -1),  9),
+        ("GRID",          (0, 0),  (-1, -1),  0.4, C_BORDER),
+        ("ROWBACKGROUNDS",(0, 1),  (-1, -1),  [C_WHITE, C_LIGHT]),
+        ("VALIGN",        (0, 0),  (-1, -1),  "MIDDLE"),
+        ("TOPPADDING",    (0, 0),  (-1, -1),  5),
+        ("BOTTOMPADDING", (0, 0),  (-1, -1),  5),
+        ("LEFTPADDING",   (0, 0),  (0, -1),   6),
+    ]
+    for i in section_indices:
+        style_cmds += [
+            ("BACKGROUND", (0, i), (-1, i), C_SECTION),
+            ("SPAN",       (0, i), (-1, i)),
+        ]
+    for i in total_indices:
+        style_cmds.append(("BACKGROUND", (0, i), (-1, i), C_TOTAL))
+
+    t.setStyle(TableStyle(style_cmds))
+    return t
+
+
+LC_NAMES = {
+    10: "Orman (Tree cover)",        20: "Calilık (Shrubland)",
+    30: "Otlak (Grassland)",         40: "Tarim (Cropland)",
+    50: "Yapilasma (Built-up)",      60: "Ciplak Arazi (Bare)",
+    70: "Kar/Buz (Snow/Ice)",        80: "Su (Water)",
+    90: "Sulak Alan (Wetland)",      95: "Mangrov (Mangrove)",
+    100: "Yosun/Liken (Moss)",
+}
+
+
+def _legal_section(legal_detail: dict) -> list:
+    score      = legal_detail.get("score", 100)
+    hard_block = legal_detail.get("hard_block", False)
+    reason     = legal_detail.get("reason", "Bilinen yasal kisit yok")
+    wdpa       = legal_detail.get("wdpa_checked", False)
+
+    if hard_block:
+        badge   = "YASAL ENGELLENMIS — BU SAHADA PROJE YURUTÜLEMEZ"
+        color   = C_RED
+        bg      = C_RED_BG
+        advice  = ("Bu saha yasal kisit nedeniyle elenmelidir. "
+                   "Alternatif lokasyon arastirilmasi gereklidir.")
+    elif score < 60:
+        badge   = "YUMUSAK KISIT — IZIN SURECI GEREKEBİLİR"
+        color   = C_ORANGE
+        bg      = C_ORANGE_BG
+        advice  = ("Yerel makamlardan izin alinmasi ve ek hukuki fizibilite yapilmasi onerilir. "
+                   "Skor dusuktur; proje riski yüksektir.")
+    else:
+        badge   = "YASAL ENGEL BULUNMAMAKTADIR"
+        color   = C_GREEN
+        bg      = C_GREEN_BG
+        advice  = ("Bilinen yasal kisit saptanmamistir. "
+                   "WDPA offline shapefile kontrolü tamamlandiginda kesinlesecektir.")
+
+    wdpa_str = "Tamamlandi" if wdpa else "Yapilmadi (offline WDPA shapefile gerekiyor)"
+
+    rows = [
+        [Paragraph(badge, _style("lbadge", size=10, bold=True, color=color)),
+         Paragraph(f"Yasal Skor: {score}/100",
+                   _style("lscore", size=9, bold=True, color=color, align="RIGHT"))],
+        [Paragraph(f"Sebep: {reason}", _style("lreason", size=9)), Paragraph("", S_SMALL)],
+        [Paragraph(f"WDPA Korunan Alan Kontrolü: {wdpa_str}", S_SMALL), Paragraph("", S_SMALL)],
+        [Paragraph(f"Tavsiye: {advice}", _style("ladvice", size=9, bold=True)), Paragraph("", S_SMALL)],
+    ]
+
+    t = Table(rows, colWidths=[13*cm, 3.5*cm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",   (0, 0), (-1, -1), bg),
+        ("BOX",          (0, 0), (-1, -1), 1.2, color),
+        ("LINEBELOW",    (0, 0), (-1, 0),  0.5, color),
+        ("TOPPADDING",   (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING",(0, 0), (-1, -1), 7),
+        ("LEFTPADDING",  (0, 0), (-1, -1), 10),
+        ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
+        ("SPAN",         (0, 1), (-1, 1)),
+        ("SPAN",         (0, 2), (-1, 2)),
+        ("SPAN",         (0, 3), (-1, 3)),
+    ]))
+    return [t]
+
+
 CRITERION_LABELS = {
     "egim":   "Arazi Egimi",
     "ghi":    "Gunes Isinimi (GHI)",
@@ -216,13 +379,14 @@ def _two_col_table(left_data: list, right_data: list,
 
 
 def generate(job_id: str, job_data: dict, narrative: str | None = None) -> bytes:
-    result   = job_data["result"]
-    name     = job_data.get("name")
-    bd       = result["breakdown"]
-    cap      = result["capacity"]
-    fin      = result["financial"]
-    score    = result["total_score"]
-    date_str = datetime.now().strftime("%d.%m.%Y %H:%M")
+    result       = job_data["result"]
+    name         = job_data.get("name")
+    bd           = result["breakdown"]
+    cap          = result["capacity"]
+    fin          = result["financial"]
+    score        = result["total_score"]
+    legal_detail = result.get("legal_detail")
+    date_str     = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -236,7 +400,7 @@ def generate(job_id: str, job_data: dict, narrative: str | None = None) -> bytes
     # Başlık
     story.append(_header_table(
         name, result["lat"], result["lon"],
-        result["area_ha"], cap["panel_tech"], cap["tracking"], date_str
+        result["area_ha"], cap.get("panel_label", cap.get("panel_tech", "—")), cap.get("tracking_label", cap.get("tracking", "—")), date_str
     ))
     story.append(Spacer(1, 0.4*cm))
 
@@ -244,7 +408,7 @@ def generate(job_id: str, job_data: dict, narrative: str | None = None) -> bytes
     story.append(Paragraph("Lokasyon ve Parametreler", S_H2))
     story.append(_info_table(
         name, result["lat"], result["lon"], result["area_ha"],
-        cap["panel_tech"], cap["tracking"], result["utm_zone"]
+        cap.get("panel_label", cap.get("panel_tech", "—")), cap.get("tracking_label", cap.get("tracking", "—")), result["utm_zone"]
     ))
     story.append(Spacer(1, 0.4*cm))
 
@@ -258,6 +422,18 @@ def generate(job_id: str, job_data: dict, narrative: str | None = None) -> bytes
     story.append(_breakdown_table(bd))
     story.append(Spacer(1, 0.4*cm))
 
+    # Yasal durum
+    story.append(Paragraph("Yasal Durum Degerlendirmesi", S_H2))
+    if legal_detail:
+        story.extend(_legal_section(legal_detail))
+    else:
+        yasal_score = bd.get("yasal", {}).get("score", 100) if isinstance(bd, dict) else 100
+        story.extend(_legal_section({
+            "score": yasal_score, "hard_block": result.get("hard_block", False),
+            "reason": "Detay mevcut degil (eski analiz)", "wdpa_checked": False,
+        }))
+    story.append(Spacer(1, 0.4*cm))
+
     # AI narratifi (varsa)
     if narrative:
         story.append(Paragraph("Yatirim Degerlendirmesi", S_H2))
@@ -268,21 +444,26 @@ def generate(job_id: str, job_data: dict, narrative: str | None = None) -> bytes
                 story.append(Spacer(1, 0.15*cm))
         story.append(Spacer(1, 0.25*cm))
 
-    # Kapasite + Finansal
+    # Kapasite özeti
     cap_rows = [
         [Paragraph("MW/ha (dinamik)", S_NORMAL), Paragraph(str(cap["mw_per_ha"]), S_NORMAL)],
         [Paragraph("GCR Efektif",     S_NORMAL), Paragraph(str(cap["gcr_effective"]), S_NORMAL)],
         [Paragraph("Toplam Kurulu",   S_NORMAL), Paragraph(f"{cap['total_mw']:.1f} MW", S_NORMAL)],
         [Paragraph("Yillik Uretim",   S_NORMAL), Paragraph(f"{cap['annual_gwh']:.1f} GWh", S_NORMAL)],
     ]
-    fin_rows = [
+    meta_rows = [
         [Paragraph("USD/TL (TCMB)",   S_NORMAL), Paragraph(f"{fin['usd_tl']:.2f}", S_NORMAL)],
-        [Paragraph("Yatirim",         S_NORMAL), Paragraph(f"${fin['total_investment_usd']:,.0f}", S_NORMAL)],
-        [Paragraph("Yillik Gelir",    S_NORMAL), Paragraph(f"{fin['annual_revenue_tl']/1e6:.1f} M TL", S_NORMAL)],
-        [Paragraph("Geri Odeme",      S_NORMAL), Paragraph(f"{fin['payback_years']:.1f} yil", S_NORMAL)],
+        [Paragraph("PPA Fiyati",      S_NORMAL), Paragraph(f"${fin['ppa_usd_per_kwh']}/kWh", S_NORMAL)],
+        [Paragraph("Proje Omru",      S_NORMAL), Paragraph("25 yil", S_NORMAL)],
+        [Paragraph("Panel / Tracking",S_NORMAL), Paragraph(f"{cap.get('panel_label','—')} / {cap.get('tracking_label','—')}", S_NORMAL)],
     ]
-    story.append(Paragraph("Kapasite ve Finansal Ozet", S_H2))
-    story.append(_two_col_table(cap_rows, fin_rows, "ENERJİ KAPASİTESİ", "FİNANSAL ANALİZ"))
+    story.append(Paragraph("Kapasite Ozeti", S_H2))
+    story.append(_two_col_table(cap_rows, meta_rows, "ENERJİ KAPASİTESİ", "PROJE PARAMETRELERİ"))
+    story.append(Spacer(1, 0.4*cm))
+
+    # Kalem kalem finansal hesap
+    story.append(Paragraph("Finansal Hesap (Kalem Kalem)", S_H2))
+    story.append(_financial_breakdown_table(fin, cap))
     story.append(Spacer(1, 0.6*cm))
 
     # Footer

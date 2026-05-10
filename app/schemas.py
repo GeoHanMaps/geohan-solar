@@ -79,33 +79,47 @@ class LogisticsCost(BaseModel):
 
 
 class FinancialResult(BaseModel):
-    country_code:         str
-    country_name:         str
-    usd_tl:               float
-    epc_per_mw_usd:       float
-    base_investment_usd:  float
-    grid_connection:      GridConnectionCost
-    logistics:            LogisticsCost
-    total_investment_usd: float
-    total_investment_tl:  float
-    annual_revenue_tl:    float
-    financing_rate:       float
-    payback_years:        float
-    irr_estimate:         float
-    grid_reliability:     float
+    country_code:              str
+    country_name:              str
+    usd_tl:                    float
+    epc_per_mw_usd:            float
+    base_investment_usd:       float
+    grid_connection:           GridConnectionCost
+    logistics:                 LogisticsCost
+    total_investment_usd:      float
+    total_investment_tl:       float
+    ppa_usd_per_kwh:           float
+    annual_revenue_usd:        float
+    annual_revenue_tl:         float
+    opex_usd_per_mw_year:      float
+    annual_opex_usd:           float
+    net_annual_cashflow_usd:   float
+    financing_rate:            float
+    payback_years:             float
+    irr_estimate:              float
+    grid_reliability:          float
+
+
+class LegalDetail(BaseModel):
+    score:        int
+    hard_block:   bool
+    reason:       str
+    wdpa_checked: bool
 
 
 class AnalysisResult(BaseModel):
     """Analiz tamamlandığında dönen tam sonuç."""
-    lat:         float
-    lon:         float
-    area_ha:     float
-    utm_zone:    int
-    total_score: float
-    hard_block:  bool = False
-    breakdown:   ScoreBreakdown
-    capacity:    CapacityResult
-    financial:   FinancialResult
+    lat:          float
+    lon:          float
+    area_ha:      float
+    utm_zone:     int
+    total_score:  float
+    irr_estimate: float = 0.0
+    hard_block:   bool = False
+    breakdown:    ScoreBreakdown
+    capacity:     CapacityResult
+    financial:    FinancialResult
+    legal_detail: Optional[LegalDetail] = None
 
 
 class JobResponse(BaseModel):
@@ -194,14 +208,15 @@ class BatchRequest(BaseModel):
 
 
 class BatchLocationResult(BaseModel):
-    rank:        int
-    lat:         float
-    lon:         float
-    name:        Optional[str]
-    total_score: float
-    breakdown:   ScoreBreakdown
-    capacity:    CapacityResult
-    financial:   FinancialResult
+    rank:         int
+    lat:          float
+    lon:          float
+    name:         Optional[str]
+    total_score:  float
+    irr_estimate: float = 0.0
+    breakdown:    ScoreBreakdown
+    capacity:     CapacityResult
+    financial:    FinancialResult
 
 
 class BatchJobResponse(BaseModel):

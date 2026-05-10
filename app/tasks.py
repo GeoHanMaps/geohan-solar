@@ -12,7 +12,7 @@ from app import store
 from app.schemas import (
     AnalysisRequest, AnalysisResult, BatchRequest,
     CriterionScore, ScoreBreakdown, CapacityResult, FinancialResult,
-    MapRequest,
+    LegalDetail, MapRequest,
 )
 from app.services import (
     terrain, solar, grid, access, capacity,
@@ -73,7 +73,9 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
         result = AnalysisResult(
             lat=req.lat, lon=req.lon, area_ha=req.area_ha, utm_zone=utm,
             total_score=res["total"],
+            irr_estimate=fin["irr_estimate"],
             hard_block=res.get("hard_block", False),
+            legal_detail=LegalDetail(**leg),
             breakdown=ScoreBreakdown(
                 egim=CriterionScore(   value=round(t["slope_mean_pct"], 1), unit="%",          score=s["egim"],   weight=w["egim"]),
                 ghi=CriterionScore(    value=round(ghi, 0),                 unit="kWh/m2/yil", score=s["ghi"],    weight=w["ghi"]),
@@ -137,7 +139,9 @@ def _analyse_one(loc, req: BatchRequest) -> dict | None:
         return {
             "lat": loc.lat, "lon": loc.lon, "name": loc.name,
             "total_score": res["total"],
+            "irr_estimate": fin["irr_estimate"],
             "hard_block": res.get("hard_block", False),
+            "legal_detail": leg,
             "breakdown": {
                 "egim":   {"value": round(t["slope_mean_pct"], 1), "unit": "%",          "score": s["egim"],   "weight": w["egim"]},
                 "ghi":    {"value": round(ghi, 0),                 "unit": "kWh/m2/yil", "score": s["ghi"],    "weight": w["ghi"]},
