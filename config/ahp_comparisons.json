@@ -1,0 +1,46 @@
+{
+  "_comment": [
+    "Saaty ölçeği: 1=eşit, 3=az üstün, 5=belirgin, 7=çok üstün, 9=mutlak.",
+    "Kesir kullanımı: 'ghi_vs_egim': 0.2  ↔  'egim_vs_ghi': 5 (aynı anlam).",
+    "28 çift (8 kriter × 7 / 2). Tümü belirtilmeli; CR < 0.10 hedeflenir.",
+    "Mevcut SLSQP ağırlıkları: ghi=0.40, sebeke=0.28, yasal=0.12, egim=0.08, diğerleri=0.03"
+  ],
+  "expert": "GeoHan Domain Uzmanı",
+
+  "comparisons": {
+    "ghi_vs_sebeke":  2,
+    "ghi_vs_yasal":   3,
+    "ghi_vs_egim":    5,
+    "ghi_vs_baki":    9,
+    "ghi_vs_golge":   9,
+    "ghi_vs_arazi":   9,
+    "ghi_vs_erisim":  9,
+
+    "sebeke_vs_yasal":  2,
+    "sebeke_vs_egim":   4,
+    "sebeke_vs_baki":   9,
+    "sebeke_vs_golge":  9,
+    "sebeke_vs_arazi":  9,
+    "sebeke_vs_erisim": 9,
+
+    "yasal_vs_egim":    2,
+    "yasal_vs_baki":    5,
+    "yasal_vs_golge":   5,
+    "yasal_vs_arazi":   5,
+    "yasal_vs_erisim":  5,
+
+    "egim_vs_baki":    3,
+    "egim_vs_golge":   3,
+    "egim_vs_arazi":   3,
+    "egim_vs_erisim":  3,
+
+    "baki_vs_golge":   1,
+    "baki_vs_arazi":   1,
+    "baki_vs_erisim":  1,
+
+    "golge_vs_arazi":  1,
+    "golge_vs_erisim": 1,
+
+    "arazi_vs_erisim": 1
+  }
+}

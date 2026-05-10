@@ -19,8 +19,23 @@ from scipy.optimize import minimize
 
 CRITERIA = ["egim", "ghi", "baki", "golge", "arazi", "sebeke", "erisim", "yasal"]
 DEFAULT_WEIGHTS = [0.15, 0.25, 0.08, 0.07, 0.05, 0.20, 0.10, 0.10]
-MIN_W = 0.03
+MIN_W = 0.03   # global fallback
 MAX_W = 0.40
+
+# Domain-expert minimum floors: fiziksel olarak kritik kriterler asla sıfıra düşmemeli.
+# egim: inşaat maliyeti ve arazi stabilitesi için kritik (≥ %8)
+# yasal: yasal engellenme tam kör nokta yaratır (≥ %6)
+# sebeke: şebeke bağlantısı olmadan proje hayata geçemez (≥ %8)
+CRIT_BOUNDS: dict[str, tuple[float, float]] = {
+    "egim":   (0.08, 0.40),
+    "ghi":    (0.03, 0.40),
+    "baki":   (0.03, 0.20),
+    "golge":  (0.03, 0.15),
+    "arazi":  (0.03, 0.12),
+    "sebeke": (0.08, 0.35),
+    "erisim": (0.03, 0.20),
+    "yasal":  (0.06, 0.25),
+}
 
 _WEIGHTS_FILE = Path(__file__).parent.parent.parent / "config" / "mcda_weights.json"
 
@@ -82,7 +97,7 @@ def calibrate(pilot_results: list[dict], save: bool = True) -> dict[str, float]:
 
     constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0,
                    "jac": lambda _: np.ones(len(CRITERIA))}
-    bounds = [(MIN_W, MAX_W)] * len(CRITERIA)
+    bounds = [CRIT_BOUNDS.get(c, (MIN_W, MAX_W)) for c in CRITERIA]
     w0 = np.array(DEFAULT_WEIGHTS, dtype=float)
 
     result = minimize(

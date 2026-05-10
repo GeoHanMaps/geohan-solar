@@ -50,7 +50,8 @@ class TestCalibrateBasic:
         pilots = _ideal_pilot(6)
         result = cal.calibrate(pilots, save=False)
         for k, v in result.items():
-            assert cal.MIN_W <= v <= cal.MAX_W, f"{k}={v} sınır dışı"
+            lo, hi = cal.CRIT_BOUNDS.get(k, (cal.MIN_W, cal.MAX_W))
+            assert lo <= v <= hi, f"{k}={v} sınır dışı [{lo},{hi}]"
 
     def test_weights_are_floats(self):
         pilots = _ideal_pilot(3)
