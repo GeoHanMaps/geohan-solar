@@ -35,3 +35,5 @@ data/maps/
 # GEE kimlik bilgileri
 credentials.json
 service_account*.json
+secrets/*
+!secrets/.gitkeep

@@ -1,4 +1,3 @@
-import ee
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -11,6 +10,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
+from app.gee_init import initialize_ee
 from app.limiter import limiter
 from app.routers import analyses, batch, auth
 from app.schemas import HealthResponse
@@ -29,10 +29,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        ee.Initialize(project=settings.gee_project)
-    except Exception:
-        pass
+    initialize_ee()
     Path(settings.maps_data_dir).mkdir(parents=True, exist_ok=True)
     yield
 
@@ -86,6 +83,7 @@ def serve_frontend():
 @app.get("/api/v1/health", response_model=HealthResponse, tags=["system"])
 def health():
     try:
+        import ee
         ee.Number(1).getInfo()
         gee_status = "ok"
     except Exception:

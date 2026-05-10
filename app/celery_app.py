@@ -12,8 +12,8 @@ celery_app = Celery(
 @worker_process_init.connect
 def init_gee(**kwargs):
     try:
-        import ee
-        ee.Initialize(project=settings.gee_project)
+        from app.gee_init import initialize_ee
+        initialize_ee()
     except Exception:
         pass  # GEE yoksa terrain servisi kendi hatasını verir
 

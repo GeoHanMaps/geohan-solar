@@ -8,6 +8,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - gee-credentials:/home/geohan/.config/earthengine
+      - ./secrets:/app/secrets:ro
       - ./config:/app/config:ro
       - ./cache:/app/cache
       - maps-data:/app/data/maps
@@ -38,6 +39,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - gee-credentials:/home/geohan/.config/earthengine
+      - ./secrets:/app/secrets:ro
       - ./config:/app/config:ro
       - ./cache:/app/cache
       - maps-data:/app/data/maps

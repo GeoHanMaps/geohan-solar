@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     gee_project: str = "geohan-solar"
+    # Service Account JSON path — varsa OAuth yerine bu kullanılır (kalıcı kimlik)
+    ee_service_account_key: str = ""
     nasa_power_url: str = "https://power.larc.nasa.gov/api/temporal/climatology/point"
     pvgis_url: str = "https://re.jrc.ec.europa.eu/api/v5_2/MRcalc"
     tcmb_url: str = "https://www.tcmb.gov.tr/kurlar/today.xml"
