@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "version": "1.0",
+    "version": "1.1",
     "sources": ["IRENA 2024", "YEKA GES-2024", "IEA 2024", "World Bank ESMAP", "USPVDB 2024"],
-    "updated": "2026-05-02",
+    "updated": "2026-05-07",
     "fields": {
       "epc_usd_per_mw": "Panel+inverter+montaj+altyapı toplam EPC maliyeti (USD/MW)",
       "grid_cost_per_km": "Voltaj seviyesine göre şebeke bağlantı hat maliyeti (USD/km)",
@@ -14,7 +14,8 @@
       "ppa_usd_per_kwh": "Tipik PPA / feed-in tariff (USD/kWh)",
       "permit_years": "Lisans/izin süreci (yıl)",
       "grid_reliability": "Şebeke güvenilirliği 0-1 (1=kesintisiz)",
-      "logistics_factor": "Uzak lokasyon lojistik çarpanı (1.0 = normal, 2.0 = çok uzak)"
+      "logistics_factor": "Uzak lokasyon lojistik çarpanı (1.0 = normal, 2.0 = çok uzak)",
+      "opex_usd_per_mw_year": "Yıllık O&M maliyeti (USD/MW/yıl) — gelişmiş piyasa: $12,000, gelişmekte olan: $7,000"
     }
   },
 
@@ -31,7 +32,8 @@
     "ppa_usd_per_kwh": 0.045,
     "permit_years": 2,
     "grid_reliability": 0.75,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 7000
   },
 
   "TR": {
@@ -48,6 +50,7 @@
     "permit_years": 2,
     "grid_reliability": 0.88,
     "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Bilateral PPA piyasası 2024 ~$0.065-0.075/kWh (EPİAŞ spot + kur riski primi); 154kV eşiği TEİAŞ ~150MW"
   },
 
@@ -65,6 +68,7 @@
     "permit_years": 3,
     "grid_reliability": 0.998,
     "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000,
     "notes": "BNetzA MaStR verisi; yüksek arazi maliyeti"
   },
 
@@ -81,7 +85,8 @@
     "ppa_usd_per_kwh": 0.042,
     "permit_years": 2,
     "grid_reliability": 0.995,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "IT": {
@@ -97,7 +102,8 @@
     "ppa_usd_per_kwh": 0.048,
     "permit_years": 3,
     "grid_reliability": 0.99,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "FR": {
@@ -113,7 +119,8 @@
     "ppa_usd_per_kwh": 0.050,
     "permit_years": 3,
     "grid_reliability": 0.997,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "GB": {
@@ -129,7 +136,8 @@
     "ppa_usd_per_kwh": 0.055,
     "permit_years": 3,
     "grid_reliability": 0.997,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "NL": {
@@ -145,7 +153,8 @@
     "ppa_usd_per_kwh": 0.052,
     "permit_years": 2,
     "grid_reliability": 0.999,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "PT": {
@@ -161,7 +170,8 @@
     "ppa_usd_per_kwh": 0.038,
     "permit_years": 2,
     "grid_reliability": 0.993,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "GR": {
@@ -177,7 +187,8 @@
     "ppa_usd_per_kwh": 0.065,
     "permit_years": 3,
     "grid_reliability": 0.985,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "PL": {
@@ -193,7 +204,8 @@
     "ppa_usd_per_kwh": 0.062,
     "permit_years": 2,
     "grid_reliability": 0.992,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "RO": {
@@ -209,7 +221,8 @@
     "ppa_usd_per_kwh": 0.055,
     "permit_years": 3,
     "grid_reliability": 0.980,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "UA": {
@@ -226,6 +239,7 @@
     "permit_years": 3,
     "grid_reliability": 0.75,
     "logistics_factor": 1.3,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Savaş riski nedeniyle yüksek ülke riski"
   },
 
@@ -243,6 +257,7 @@
     "permit_years": 2,
     "grid_reliability": 0.80,
     "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000,
     "notes": "DISCOM bilateral PPA; SECI ihale rekoru $0.028 — pratikte $0.045"
   },
 
@@ -260,6 +275,7 @@
     "permit_years": 1,
     "grid_reliability": 0.92,
     "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 7000,
     "notes": "IRENA 2024; panel üreticisi ülke avantajı"
   },
 
@@ -277,6 +293,7 @@
     "permit_years": 4,
     "grid_reliability": 0.999,
     "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 12000,
     "notes": "Yüksek arazi ve işçilik maliyeti; ada zorluğu"
   },
 
@@ -293,7 +310,8 @@
     "ppa_usd_per_kwh": 0.065,
     "permit_years": 3,
     "grid_reliability": 0.998,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "AU": {
@@ -310,6 +328,7 @@
     "permit_years": 2,
     "grid_reliability": 0.99,
     "logistics_factor": 1.3,
+    "opex_usd_per_mw_year": 12000,
     "notes": "Kurumsal PPA + LGC (Large-scale Generation Certificate) bundled $0.055-0.065/kWh; WA SWIS merchant ~$60-90 AUD/MWh; EPC 2024 benchmark ~AUD 1.35M/MW"
   },
 
@@ -327,6 +346,7 @@
     "permit_years": 2,
     "grid_reliability": 0.992,
     "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000,
     "notes": "USPVDB 2024 verisi; %15 gümrük"
   },
 
@@ -343,7 +363,8 @@
     "ppa_usd_per_kwh": 0.048,
     "permit_years": 3,
     "grid_reliability": 0.995,
-    "logistics_factor": 1.2
+    "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 12000
   },
 
   "MX": {
@@ -359,7 +380,8 @@
     "ppa_usd_per_kwh": 0.035,
     "permit_years": 2,
     "grid_reliability": 0.92,
-    "logistics_factor": 1.1
+    "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000
   },
 
   "BR": {
@@ -376,6 +398,7 @@
     "permit_years": 2,
     "grid_reliability": 0.93,
     "logistics_factor": 1.15,
+    "opex_usd_per_mw_year": 7000,
     "notes": "IRENA 2024; BNDES finansman desteği mevcut"
   },
 
@@ -393,6 +416,7 @@
     "permit_years": 2,
     "grid_reliability": 0.95,
     "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Atacama çölü — dünya rekoru GHI"
   },
 
@@ -410,6 +434,7 @@
     "permit_years": 3,
     "grid_reliability": 0.88,
     "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Yüksek ülke riski; kur riski yüksek"
   },
 
@@ -426,7 +451,8 @@
     "ppa_usd_per_kwh": 0.038,
     "permit_years": 2,
     "grid_reliability": 0.91,
-    "logistics_factor": 1.2
+    "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 7000
   },
 
   "SA": {
@@ -443,6 +469,7 @@
     "permit_years": 1,
     "grid_reliability": 0.97,
     "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Özel geliştirici bilateral/C&I PPA $0.035-0.042/kWh (ACWA Al-Shuaiba ~$0.040); kamu ihalesi NEOM $0.013 bu modele dahil değil"
   },
 
@@ -460,6 +487,7 @@
     "permit_years": 1,
     "grid_reliability": 0.98,
     "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Al Dhafra kamu rekoru $0.0135 — özel bilateral PPA $0.026"
   },
 
@@ -477,6 +505,7 @@
     "permit_years": 2,
     "grid_reliability": 0.85,
     "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Benban Solar Park referansı"
   },
 
@@ -494,6 +523,7 @@
     "permit_years": 2,
     "grid_reliability": 0.88,
     "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Noor Ouarzazate; MASEN ajansı"
   },
 
@@ -510,7 +540,8 @@
     "ppa_usd_per_kwh": 0.042,
     "permit_years": 3,
     "grid_reliability": 0.82,
-    "logistics_factor": 1.2
+    "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 7000
   },
 
   "TN": {
@@ -526,7 +557,8 @@
     "ppa_usd_per_kwh": 0.045,
     "permit_years": 2,
     "grid_reliability": 0.87,
-    "logistics_factor": 1.1
+    "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000
   },
 
   "LY": {
@@ -543,6 +575,7 @@
     "permit_years": 5,
     "grid_reliability": 0.60,
     "logistics_factor": 1.5,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Yüksek siyasi risk; güvenlik sorunu"
   },
 
@@ -560,6 +593,7 @@
     "permit_years": 3,
     "grid_reliability": 0.45,
     "logistics_factor": 1.4,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Şebeke güvenilirliği çok düşük; off-grid çözüm gerekebilir"
   },
 
@@ -577,6 +611,7 @@
     "permit_years": 2,
     "grid_reliability": 0.70,
     "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000,
     "notes": "REIPPPP programı; Eskom şebeke sorunu"
   },
 
@@ -593,7 +628,8 @@
     "ppa_usd_per_kwh": 0.062,
     "permit_years": 3,
     "grid_reliability": 0.72,
-    "logistics_factor": 1.3
+    "logistics_factor": 1.3,
+    "opex_usd_per_mw_year": 7000
   },
 
   "ET": {
@@ -610,6 +646,7 @@
     "permit_years": 4,
     "grid_reliability": 0.55,
     "logistics_factor": 1.6,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Uzak lokasyon lojistiği çok yüksek"
   },
 
@@ -626,7 +663,8 @@
     "ppa_usd_per_kwh": 0.055,
     "permit_years": 4,
     "grid_reliability": 0.55,
-    "logistics_factor": 1.6
+    "logistics_factor": 1.6,
+    "opex_usd_per_mw_year": 7000
   },
 
   "GH": {
@@ -642,7 +680,8 @@
     "ppa_usd_per_kwh": 0.060,
     "permit_years": 3,
     "grid_reliability": 0.65,
-    "logistics_factor": 1.3
+    "logistics_factor": 1.3,
+    "opex_usd_per_mw_year": 7000
   },
 
   "SN": {
@@ -658,7 +697,8 @@
     "ppa_usd_per_kwh": 0.058,
     "permit_years": 3,
     "grid_reliability": 0.65,
-    "logistics_factor": 1.4
+    "logistics_factor": 1.4,
+    "opex_usd_per_mw_year": 7000
   },
 
   "ML": {
@@ -675,6 +715,7 @@
     "permit_years": 4,
     "grid_reliability": 0.45,
     "logistics_factor": 1.8,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Mini-grid/off-grid; dizel yerine geçme değeri ~$0.15/kWh; pratikte $0.13"
   },
 
@@ -692,6 +733,7 @@
     "permit_years": 5,
     "grid_reliability": 0.35,
     "logistics_factor": 2.0,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Neredeyse şebekesiz; dizel yerine geçme $0.18/kWh; mini-grid PPA $0.15"
   },
 
@@ -709,6 +751,7 @@
     "permit_years": 5,
     "grid_reliability": 0.30,
     "logistics_factor": 2.2,
+    "opex_usd_per_mw_year": 7000,
     "notes": "En düşük şebeke güvenilirliği; yüksek siyasi risk"
   },
 
@@ -725,7 +768,8 @@
     "ppa_usd_per_kwh": 0.045,
     "permit_years": 3,
     "grid_reliability": 0.70,
-    "logistics_factor": 1.2
+    "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 7000
   },
 
   "BD": {
@@ -742,6 +786,7 @@
     "permit_years": 3,
     "grid_reliability": 0.75,
     "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Yüksek nüfus yoğunluğu nedeniyle arazi kıtlığı"
   },
 
@@ -759,6 +804,7 @@
     "permit_years": 3,
     "grid_reliability": 0.82,
     "logistics_factor": 1.3,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Ada ülkesi — her ada için ayrı şebeke"
   },
 
@@ -775,7 +821,8 @@
     "ppa_usd_per_kwh": 0.038,
     "permit_years": 2,
     "grid_reliability": 0.88,
-    "logistics_factor": 1.1
+    "logistics_factor": 1.1,
+    "opex_usd_per_mw_year": 7000
   },
 
   "TH": {
@@ -791,7 +838,8 @@
     "ppa_usd_per_kwh": 0.042,
     "permit_years": 2,
     "grid_reliability": 0.92,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 7000
   },
 
   "MY": {
@@ -807,7 +855,8 @@
     "ppa_usd_per_kwh": 0.040,
     "permit_years": 2,
     "grid_reliability": 0.94,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 7000
   },
 
   "PH": {
@@ -824,6 +873,7 @@
     "permit_years": 3,
     "grid_reliability": 0.85,
     "logistics_factor": 1.4,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Takımada — ada başına ayrı şebeke"
   },
 
@@ -841,6 +891,7 @@
     "permit_years": 4,
     "grid_reliability": 0.55,
     "logistics_factor": 1.5,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Siyasi istikrarsızlık; hasar görmüş şebeke"
   },
 
@@ -858,6 +909,7 @@
     "permit_years": 3,
     "grid_reliability": 0.78,
     "logistics_factor": 1.4,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Yaptırımlar nedeniyle yüksek ithalat maliyeti"
   },
 
@@ -874,7 +926,8 @@
     "ppa_usd_per_kwh": 0.055,
     "permit_years": 3,
     "grid_reliability": 0.997,
-    "logistics_factor": 1.0
+    "logistics_factor": 1.0,
+    "opex_usd_per_mw_year": 12000
   },
 
   "KZ": {
@@ -890,7 +943,8 @@
     "ppa_usd_per_kwh": 0.048,
     "permit_years": 3,
     "grid_reliability": 0.82,
-    "logistics_factor": 1.3
+    "logistics_factor": 1.3,
+    "opex_usd_per_mw_year": 7000
   },
 
   "UZ": {
@@ -907,6 +961,7 @@
     "permit_years": 2,
     "grid_reliability": 0.80,
     "logistics_factor": 1.2,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Düşük PPA; güçlü güneş kaynağı"
   },
 
@@ -924,23 +979,24 @@
     "permit_years": 4,
     "grid_reliability": 0.88,
     "logistics_factor": 1.4,
+    "opex_usd_per_mw_year": 7000,
     "notes": "Yaptırımlar + geniş coğrafya lojistik zorluğu"
   },
 
   "_regions": {
-    "western_europe":       {"epc_usd_per_mw": 860000, "financing_rate": 0.050, "logistics_factor": 1.0, "grid_reliability": 0.995},
-    "eastern_europe":       {"epc_usd_per_mw": 840000, "financing_rate": 0.080, "logistics_factor": 1.1, "grid_reliability": 0.980},
-    "southeastern_europe":  {"epc_usd_per_mw": 820000, "financing_rate": 0.075, "logistics_factor": 1.0, "grid_reliability": 0.985},
-    "middle_east_turkey":   {"epc_usd_per_mw": 1000000,"financing_rate": 0.110, "logistics_factor": 1.0, "grid_reliability": 0.880},
-    "middle_east":          {"epc_usd_per_mw": 720000, "financing_rate": 0.075, "logistics_factor": 1.1, "grid_reliability": 0.930},
-    "north_africa":         {"epc_usd_per_mw": 840000, "financing_rate": 0.110, "logistics_factor": 1.2, "grid_reliability": 0.840},
-    "sub_saharan_africa":   {"epc_usd_per_mw": 1100000,"financing_rate": 0.160, "logistics_factor": 1.6, "grid_reliability": 0.550},
-    "south_asia":           {"epc_usd_per_mw": 590000, "financing_rate": 0.110, "logistics_factor": 1.1, "grid_reliability": 0.780},
-    "east_asia":            {"epc_usd_per_mw": 650000, "financing_rate": 0.065, "logistics_factor": 1.0, "grid_reliability": 0.940},
-    "southeast_asia":       {"epc_usd_per_mw": 750000, "financing_rate": 0.100, "logistics_factor": 1.2, "grid_reliability": 0.880},
-    "central_asia":         {"epc_usd_per_mw": 860000, "financing_rate": 0.125, "logistics_factor": 1.3, "grid_reliability": 0.810},
-    "north_america":        {"epc_usd_per_mw": 1060000,"financing_rate": 0.058, "logistics_factor": 1.0, "grid_reliability": 0.993},
-    "latin_america":        {"epc_usd_per_mw": 820000, "financing_rate": 0.120, "logistics_factor": 1.2, "grid_reliability": 0.910},
-    "oceania":              {"epc_usd_per_mw": 1050000,"financing_rate": 0.055, "logistics_factor": 1.4, "grid_reliability": 0.990}
+    "western_europe":       {"epc_usd_per_mw": 860000,  "financing_rate": 0.050, "logistics_factor": 1.0, "grid_reliability": 0.995, "opex_usd_per_mw_year": 12000},
+    "eastern_europe":       {"epc_usd_per_mw": 840000,  "financing_rate": 0.080, "logistics_factor": 1.1, "grid_reliability": 0.980, "opex_usd_per_mw_year": 12000},
+    "southeastern_europe":  {"epc_usd_per_mw": 820000,  "financing_rate": 0.075, "logistics_factor": 1.0, "grid_reliability": 0.985, "opex_usd_per_mw_year": 12000},
+    "middle_east_turkey":   {"epc_usd_per_mw": 1000000, "financing_rate": 0.110, "logistics_factor": 1.0, "grid_reliability": 0.880, "opex_usd_per_mw_year": 7000},
+    "middle_east":          {"epc_usd_per_mw": 720000,  "financing_rate": 0.075, "logistics_factor": 1.1, "grid_reliability": 0.930, "opex_usd_per_mw_year": 7000},
+    "north_africa":         {"epc_usd_per_mw": 840000,  "financing_rate": 0.110, "logistics_factor": 1.2, "grid_reliability": 0.840, "opex_usd_per_mw_year": 7000},
+    "sub_saharan_africa":   {"epc_usd_per_mw": 1100000, "financing_rate": 0.160, "logistics_factor": 1.6, "grid_reliability": 0.550, "opex_usd_per_mw_year": 7000},
+    "south_asia":           {"epc_usd_per_mw": 590000,  "financing_rate": 0.110, "logistics_factor": 1.1, "grid_reliability": 0.780, "opex_usd_per_mw_year": 7000},
+    "east_asia":            {"epc_usd_per_mw": 650000,  "financing_rate": 0.065, "logistics_factor": 1.0, "grid_reliability": 0.940, "opex_usd_per_mw_year": 7000},
+    "southeast_asia":       {"epc_usd_per_mw": 750000,  "financing_rate": 0.100, "logistics_factor": 1.2, "grid_reliability": 0.880, "opex_usd_per_mw_year": 7000},
+    "central_asia":         {"epc_usd_per_mw": 860000,  "financing_rate": 0.125, "logistics_factor": 1.3, "grid_reliability": 0.810, "opex_usd_per_mw_year": 7000},
+    "north_america":        {"epc_usd_per_mw": 1060000, "financing_rate": 0.058, "logistics_factor": 1.0, "grid_reliability": 0.993, "opex_usd_per_mw_year": 12000},
+    "latin_america":        {"epc_usd_per_mw": 820000,  "financing_rate": 0.120, "logistics_factor": 1.2, "grid_reliability": 0.910, "opex_usd_per_mw_year": 7000},
+    "oceania":              {"epc_usd_per_mw": 1050000, "financing_rate": 0.055, "logistics_factor": 1.4, "grid_reliability": 0.990, "opex_usd_per_mw_year": 12000}
   }
 }

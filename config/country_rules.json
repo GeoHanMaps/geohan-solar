@@ -111,6 +111,13 @@
     "min_grid_kv":   33,
     "notes": "REIPPPP kapsamında izin prosedürleri uygulanır"
   },
+  "CL": {
+    "max_slope_pct": 20,
+    "forbidden_lc":  [10, 70, 80, 90, 95],
+    "soft_block_lc": [],
+    "min_grid_kv":   66,
+    "notes": "Şili; Atacama çölü GES için ideal. Ulusal park ve RAMSAR sınırları (Salar de Atacama) dikkatli izlenmeli. CNE lisans zorunlu."
+  },
   "EG": {
     "max_slope_pct": 20,
     "forbidden_lc":  [70, 80, 90, 95],
@@ -126,7 +133,7 @@
     "notes": "MASEN koordinasyonu gerektirir"
   },
   "DEFAULT": {
-    "max_slope_pct": 20,
+    "max_slope_pct": 15,
     "forbidden_lc":  [10, 70, 80, 90, 95],
     "soft_block_lc": [40],
     "min_grid_kv":   0,
