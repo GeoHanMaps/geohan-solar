@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # Redis / Celery
     redis_url: str = "redis://localhost:6379/0"
 
+    # PostgreSQL (Sprint 9 — credits)
+    # Boş bırakılırsa DB-bağımlı endpoint'ler kullanılamaz; mevcut akış etkilenmez.
+    database_url: str = ""
+
     # JWT auth
     secret_key: str = _DEFAULT_SECRET
     api_username: str = "admin"

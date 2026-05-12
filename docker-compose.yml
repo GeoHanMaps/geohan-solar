@@ -6,6 +6,7 @@ services:
     env_file: .env
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg2://geohan:geohan@postgres:5432/geohan
       - DEBUG=true
     volumes:
       - gee-credentials:/home/geohan/.config/earthengine
@@ -16,6 +17,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   worker:
@@ -24,6 +27,7 @@ services:
     env_file: .env
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg2://geohan:geohan@postgres:5432/geohan
     volumes:
       - gee-credentials:/home/geohan/.config/earthengine
       - ./secrets:/app/secrets:ro
@@ -32,6 +36,8 @@ services:
       - maps-data:/app/data/maps
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     restart: unless-stopped
 
@@ -44,6 +50,22 @@ services:
       retries: 5
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: geohan
+      POSTGRES_PASSWORD: geohan
+      POSTGRES_DB: geohan
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geohan -d geohan"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
 volumes:
   gee-credentials:
   maps-data:
+  postgres-data:

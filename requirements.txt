@@ -53,6 +53,11 @@ cdsapi>=0.7.0
 celery>=5.4.0
 redis>=5.0.0
 
+# Database (Sprint 9 — credits)
+sqlalchemy>=2.0.30
+alembic>=1.13.0
+psycopg2-binary>=2.9.9
+
 # Heatmap / tile
 Pillow>=10.0.0
 
