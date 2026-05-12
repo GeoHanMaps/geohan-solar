@@ -175,7 +175,7 @@ def _financial_breakdown_table(fin: dict, cap: dict) -> Table:
         Paragraph("TUTAR",     _style("fh", size=8, bold=True, color=C_WHITE, align="RIGHT")),
     ]
 
-    epc_label = f"EPC (panel + inverter + inşaat)"
+    epc_label = "EPC (panel + inverter + inşaat)"
     epc_calc  = f"{total_mw:.1f} MW × ${fin['epc_per_mw_usd']:,.0f}/MW"
     gc_label  = f"Şebeke bağlantısı ({gc['voltage_level'].upper()}, {gc['line_km']} km)"
     gc_calc   = f"Hat: {usd(gc['line_cost_usd'])}  +  Trafo: {usd(gc['substation_cost_usd'])}"

@@ -11,7 +11,6 @@ kalite ve tutarlılık garantilerini korur.
 import json
 from pathlib import Path
 
-import pytest
 
 from app.services.ahp import parse_comparisons, ahp_calibrate
 from app.services.calibrate import CRITERIA

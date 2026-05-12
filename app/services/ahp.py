@@ -20,7 +20,6 @@ Yöntem: Satır geometrik ortalaması (eigenvector ile eşdeğer, sayısal olara
 import json
 import numpy as np
 from datetime import datetime, timezone
-from pathlib import Path
 
 from app.services.calibrate import CRITERIA, _WEIGHTS_FILE
 
