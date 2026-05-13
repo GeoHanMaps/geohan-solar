@@ -4,6 +4,9 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DEFAULT_SECRET = "change-me-in-production-use-a-random-32-byte-hex"
+# Known-weak admin password — surfaces a warning at import. Rotate on the
+# server with `openssl rand -hex 32` and set ADMIN_PASSWORD in .env.
+_WEAK_ADMIN_PASSWORDS = {"geohan2024", "admin", "password", "changeme"}
 
 
 class Settings(BaseSettings):
@@ -49,6 +52,10 @@ class Settings(BaseSettings):
     api_username: str = "admin"
     api_password: str = "geohan2024"
     access_token_expire_minutes: int = 1440
+    # Legacy admin login is restricted to localhost by default — operators
+    # SSH-tunnel to the box (`ssh -L 8000:localhost:8000`) to grab a token.
+    # Setting this to false re-opens the legacy behaviour (dev convenience).
+    admin_login_require_localhost: bool = True
 
     # CORS — virgülle ayrılmış string ("*" veya "https://a.com,https://b.com")
     # veya JSON array (["*"]) olarak .env'de verilebilir
@@ -81,5 +88,14 @@ if settings.secret_key == _DEFAULT_SECRET:
     warnings.warn(
         "SECRET_KEY varsayılan değerde — .env dosyasında değiştirin: "
         "python -c \"import secrets; print(secrets.token_hex(32))\"",
+        stacklevel=1,
+    )
+
+if settings.api_password.lower() in _WEAK_ADMIN_PASSWORDS:
+    warnings.warn(
+        "API_PASSWORD zayıf bir varsayılan değerde — admin token sızarsa "
+        "GES analiz quota'sı ve API maliyetleri kötüye kullanılabilir. "
+        "Sunucuda rotate edin: "
+        "echo \"API_PASSWORD=$(openssl rand -hex 32)\" >> .env",
         stacklevel=1,
     )

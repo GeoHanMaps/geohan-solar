@@ -1,22 +1,15 @@
 """Sprint 9 M3: credit ledger service + balance/history endpoints.
 
-The service is exercised directly against the SQLite session (the same
-fixture pattern as test_register.py). Concurrency / FOR UPDATE coverage
-is deferred to M4's Postgres-backed integration tests — SQLite doesn't
-serialise row reads, so race tests here would be vacuous."""
+DB and dep overrides come from conftest.db_override (autouse). Race / real
+FOR UPDATE coverage stays deferred to a Postgres-backed integration suite
+(planned for M9 CI hardening); SQLite doesn't serialise row reads."""
 from __future__ import annotations
 
 from unittest.mock import patch, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.db import Base, get_session
-from app.models import user as _user_model  # noqa: F401
-from app.models import credit_transaction as _ct_model  # noqa: F401
 from app.models.credit_transaction import (
     REASON_ANALYSIS,
     REASON_PURCHASE,
@@ -30,8 +23,6 @@ from app.services.credits import (
 )
 
 
-# ─── DB + client fixtures (parallel to test_register.py) ────────────────────
-
 @pytest.fixture(autouse=True, scope="module")
 def stub_gee():
     with (
@@ -42,37 +33,15 @@ def stub_gee():
 
 
 @pytest.fixture
-def db_engine():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        future=True,
-    )
-    Base.metadata.create_all(engine)
-    yield engine
-    engine.dispose()
-
-
-@pytest.fixture
-def session_factory(db_engine):
-    return sessionmaker(bind=db_engine, autoflush=False, autocommit=False)
-
-
-@pytest.fixture
-def client(db_engine, session_factory):
+def client():
     from app.main import app
-    from app.routers.auth import session_or_none
+    return TestClient(app)
 
-    def _override():
-        with session_factory() as s:
-            yield s
 
-    app.dependency_overrides[get_session] = _override
-    app.dependency_overrides[session_or_none] = _override
-    yield TestClient(app)
-    app.dependency_overrides.pop(get_session, None)
-    app.dependency_overrides.pop(session_or_none, None)
+@pytest.fixture
+def session_factory(db_session_factory):
+    """Alias matching test_credits' historical fixture name."""
+    return db_session_factory
 
 
 def _register(client, email="user@example.com", password="supersecret"):

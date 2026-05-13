@@ -70,7 +70,8 @@ def client(tmp_path_factory):
 @pytest.fixture
 def auth_headers():
     from app.auth import create_access_token
-    token = create_access_token(sub="test")
+    from app.config import settings
+    token = create_access_token(sub=settings.api_username)
     return {"Authorization": f"Bearer {token}"}
 
 

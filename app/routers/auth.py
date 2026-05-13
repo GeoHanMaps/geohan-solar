@@ -1,7 +1,7 @@
 import secrets
 from typing import Iterator, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -15,6 +15,21 @@ from app.schemas import RegisterRequest, TokenResponse, UserResponse
 from app.security import hash_password, verify_password
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+
+# IPs that count as "this machine" for the admin localhost gate. "testclient"
+# is starlette's TestClient peer label — never appears in real traffic.
+_LOCALHOST_IPS = {"127.0.0.1", "::1", "localhost", "testclient"}
+
+
+def _is_localhost_request(request: Request) -> bool:
+    """True iff the request's direct peer AND every hop in X-Forwarded-For
+    are localhost. nginx behind us terminates external clients with a
+    non-local X-Forwarded-For entry, so this gate catches them even when the
+    direct peer (nginx itself) is 127.0.0.1."""
+    direct = request.client.host if request.client else ""
+    fwd = request.headers.get("X-Forwarded-For", "")
+    hops = [h.strip() for h in fwd.split(",") if h.strip()]
+    return all(ip in _LOCALHOST_IPS for ip in [direct, *hops])
 
 
 def session_or_none() -> Iterator[Optional[Session]]:
@@ -71,11 +86,14 @@ def register(req: RegisterRequest, session: Session = Depends(get_session)):
 
 @router.post("/token", response_model=TokenResponse, summary="API token al")
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Optional[Session] = Depends(session_or_none),
 ):
     """OAuth2 password flow. DB'de kayıtlı kullanıcılar email/şifre ile;
-    legacy admin env-based kimlik bilgileriyle giriş yapar."""
+    legacy admin env-based kimlik bilgileriyle giriş yapar. Admin login
+    `ADMIN_LOGIN_REQUIRE_LOCALHOST=true` (default) iken yalnızca yerelden
+    kabul edilir — sunucuya SSH tunnel ile bağlanın."""
     if session is not None:
         email = form_data.username.strip().lower()
         user = session.query(User).filter(User.email == email).one_or_none()
@@ -86,6 +104,12 @@ def login(
     valid_user = secrets.compare_digest(form_data.username, settings.api_username)
     valid_pass = secrets.compare_digest(form_data.password, settings.api_password)
     if valid_user and valid_pass:
+        if settings.admin_login_require_localhost and not _is_localhost_request(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Admin login sadece localhost'tan kabul edilir",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return TokenResponse(access_token=create_access_token(sub=form_data.username))
 
     raise HTTPException(

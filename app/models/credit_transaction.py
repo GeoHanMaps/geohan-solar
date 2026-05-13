@@ -14,6 +14,8 @@ REASON_ANALYSIS = "analysis"
 REASON_HEATMAP = "heatmap"
 REASON_REFUND = "refund"
 REASON_ADMIN_ADJUST = "admin_adjust"
+# Admin bypass audit (amount=0, user_id NULL) — see M4 cost middleware.
+REASON_ADMIN_BYPASS = "admin_bypass"
 
 
 class CreditTransaction(Base):
@@ -22,10 +24,12 @@ class CreditTransaction(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    # Nullable: system-actor rows (admin bypass, future stripe-webhook audit)
+    # carry NULL user_id and use the `reason` column to identify the actor.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     amount: Mapped[int] = mapped_column(Integer, nullable=False)

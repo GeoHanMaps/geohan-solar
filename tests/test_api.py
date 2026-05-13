@@ -52,8 +52,11 @@ def client():
 
 @pytest.fixture
 def token():
+    """Admin-sub'lu token: M4 cost middleware bunu bypass yoluna sokar,
+    test invariant'ları (job_id dönüşü, vb.) bozulmadan kalır."""
     from app.auth import create_access_token
-    return create_access_token(sub="test")
+    from app.config import settings
+    return create_access_token(sub=settings.api_username)
 
 
 @pytest.fixture

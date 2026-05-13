@@ -1,26 +1,16 @@
 """Sprint 9 M2: multi-user auth — register, login (DB user + legacy admin), /me.
 
-DB layer is exercised against in-memory SQLite via a get_session override;
-the User/CreditTransaction models use SQLAlchemy 2.0's portable Uuid so the
-same models that run on Postgres in prod also create cleanly on SQLite."""
+DB and dependency overrides come from conftest.db_override (autouse); this
+module only adds GEE lifespan stubs and a TestClient handle."""
 from __future__ import annotations
 
 from unittest.mock import patch, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.config import settings
-from app.db import Base, get_session
-# import models so their tables register on Base.metadata
-from app.models import user as _user_model  # noqa: F401
-from app.models import credit_transaction as _ct_model  # noqa: F401
 
-
-# ─── In-memory DB fixture ────────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True, scope="module")
 def stub_gee():
@@ -33,43 +23,9 @@ def stub_gee():
 
 
 @pytest.fixture
-def db_engine():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        future=True,
-    )
-    Base.metadata.create_all(engine)
-    yield engine
-    engine.dispose()
-
-
-@pytest.fixture
-def db_session(db_engine):
-    TestSession = sessionmaker(bind=db_engine, autoflush=False, autocommit=False)
-    with TestSession() as session:
-        yield session
-
-
-@pytest.fixture
-def client(db_engine):
-    """TestClient with both get_session and session_or_none pointing at the
-    in-memory DB so /register, /token, /me all share the same store."""
+def client():
     from app.main import app
-    from app.routers.auth import session_or_none
-
-    TestSession = sessionmaker(bind=db_engine, autoflush=False, autocommit=False)
-
-    def _override_session():
-        with TestSession() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override_session
-    app.dependency_overrides[session_or_none] = _override_session
-    yield TestClient(app)
-    app.dependency_overrides.pop(get_session, None)
-    app.dependency_overrides.pop(session_or_none, None)
+    return TestClient(app)
 
 
 # ─── /auth/register ──────────────────────────────────────────────────────────
@@ -83,28 +39,26 @@ class TestRegister:
         assert "access_token" in body
         assert body["token_type"] == "bearer"
 
-    def test_persists_user_with_signup_bonus(self, client, db_engine):
+    def test_persists_user_with_signup_bonus(self, client, db_session_factory):
         r = client.post("/api/v1/auth/register",
                         json={"email": "bob@example.com", "password": "supersecret"})
         assert r.status_code == 201
 
         from app.models.user import User, SIGNUP_BONUS_CREDITS
 
-        TestSession = sessionmaker(bind=db_engine)
-        with TestSession() as s:
+        with db_session_factory() as s:
             user = s.query(User).filter_by(email="bob@example.com").one()
             assert user.credits == SIGNUP_BONUS_CREDITS
             assert user.password_hash != "supersecret"
             assert user.password_hash.startswith("$2")
 
-    def test_records_signup_bonus_transaction(self, client, db_engine):
+    def test_records_signup_bonus_transaction(self, client, db_session_factory):
         client.post("/api/v1/auth/register",
                     json={"email": "tx@example.com", "password": "supersecret"})
 
         from app.models.credit_transaction import CreditTransaction, REASON_SIGNUP_BONUS
 
-        TestSession = sessionmaker(bind=db_engine)
-        with TestSession() as s:
+        with db_session_factory() as s:
             tx = s.query(CreditTransaction).filter_by(reason=REASON_SIGNUP_BONUS).one()
             assert tx.amount == 5
             assert tx.balance_after == 5
@@ -120,12 +74,11 @@ class TestRegister:
                         json={"email": "x@example.com", "password": "short"})
         assert r.status_code == 422
 
-    def test_email_normalised_to_lowercase(self, client, db_engine):
+    def test_email_normalised_to_lowercase(self, client, db_session_factory):
         client.post("/api/v1/auth/register",
                     json={"email": "Mixed@Example.com", "password": "supersecret"})
         from app.models.user import User
-        TestSession = sessionmaker(bind=db_engine)
-        with TestSession() as s:
+        with db_session_factory() as s:
             assert s.query(User).filter_by(email="mixed@example.com").one_or_none()
 
     def test_invalid_email_returns_422(self, client):

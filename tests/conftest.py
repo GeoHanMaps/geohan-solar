@@ -4,10 +4,21 @@ Global test fixture'ları.
 fake_redis_store : Her test için temiz FakeRedis — store.py Redis bağlantısını replace eder.
 eager_celery     : Celery task'larını senkron çalıştırır (broker'a bağlantı yok).
 auth_headers     : Geçerli JWT token içeren Authorization başlığı.
+
+DB fixture'ları (Sprint 9):
+db_engine        : Function-scope SQLite :memory: (StaticPool, tablolar oluşturulmuş).
+db_session_factory: db_engine'e bağlı sessionmaker.
+db_override      : autouse — FastAPI'nin get_session ve session_or_none
+                   dep'lerini db_engine'e yönlendirir. Önceki override'ı
+                   yedekler/restore eder ki test_register, test_credits gibi
+                   override'ları üstüne yığan testler bozulmasın.
 """
 
 import pytest
 import fakeredis
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture
@@ -66,9 +77,76 @@ def eager_celery():
     celery_app.conf.task_always_eager = False
 
 
+@pytest.fixture(autouse=True, scope="session")
+def disable_rate_limit():
+    """slowapi's 10/minute analyses cap trips under the full pytest run;
+    tests don't validate rate limiting behaviour, so turn it off globally."""
+    from app.limiter import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
+
+
 @pytest.fixture
 def auth_headers():
-    """Korumalı endpoint'ler için geçerli Authorization başlığı."""
+    """Korumalı endpoint'ler için geçerli Authorization başlığı. M4'ten
+    sonra /analyses ve /maps kredi düşüyor; bu fixture admin sub'u
+    kullanıyor → bypass + audit row (test isolation için yeterli)."""
     from app.auth import create_access_token
-    token = create_access_token(sub="test")
+    from app.config import settings
+    token = create_access_token(sub=settings.api_username)
     return {"Authorization": f"Bearer {token}"}
+
+
+# ─── DB fixture'ları (Sprint 9 M2+) ──────────────────────────────────────────
+
+@pytest.fixture
+def db_engine():
+    """Fresh in-memory SQLite per test. StaticPool keeps a single connection
+    so all sessions/operations see the same tables."""
+    from app.db import Base
+    # Import models so their tables register on Base.metadata.
+    from app.models import user as _user  # noqa: F401
+    from app.models import credit_transaction as _ct  # noqa: F401
+
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
+    Base.metadata.create_all(engine)
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture
+def db_session_factory(db_engine):
+    return sessionmaker(bind=db_engine, autoflush=False, autocommit=False)
+
+
+@pytest.fixture(autouse=True)
+def db_override(db_engine, db_session_factory):
+    """Route every FastAPI request's get_session / session_or_none through
+    the test's in-memory engine. Restores any prior override on exit so
+    tests that set their own (test_register, test_credits) still work."""
+    from app.main import app
+    from app.db import get_session
+    from app.routers.auth import session_or_none
+
+    def _yield_session():
+        with db_session_factory() as session:
+            yield session
+
+    saved = {
+        get_session: app.dependency_overrides.get(get_session),
+        session_or_none: app.dependency_overrides.get(session_or_none),
+    }
+    app.dependency_overrides[get_session] = _yield_session
+    app.dependency_overrides[session_or_none] = _yield_session
+    yield
+    for dep, prev in saved.items():
+        if prev is None:
+            app.dependency_overrides.pop(dep, None)
+        else:
+            app.dependency_overrides[dep] = prev

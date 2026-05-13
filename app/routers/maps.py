@@ -12,16 +12,28 @@ import uuid
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse, Response
+from fastapi.security import OAuth2PasswordBearer
 import io
 
+from sqlalchemy.orm import Session
+
 from app import store
-from app.auth import get_current_user
+from app.auth import decode_token, get_current_user
+from app.db import get_session
 from app.limiter import limiter
 from app.config import settings
+from app.models.credit_transaction import REASON_HEATMAP
 from app.schemas import MapRequest, MapJobResponse, MapStats, BoundaryResult
+from app.services.credits import require_credit
+
+# Flat 5-credit charge for any heatmap. Area-tiered pricing (5 / 10 by
+# polygon km²) is planned once area extraction is on a hot path.
+HEATMAP_COST = 5
 
 router_maps       = APIRouter(prefix="/api/v1/maps",       tags=["maps"])
 router_boundaries = APIRouter(prefix="/api/v1/boundaries", tags=["boundaries"])
+
+_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 
 # ─── Harita endpointleri ──────────────────────────────────────────────────────
@@ -30,9 +42,15 @@ router_boundaries = APIRouter(prefix="/api/v1/boundaries", tags=["boundaries"])
                   summary="Heatmap analizi başlat")
 @limiter.limit(settings.rate_limit_analyses)
 def create_map(request: Request, req: MapRequest,
-               _: str = Depends(get_current_user)):
+               token: str = Depends(_oauth2),
+               session: Session = Depends(get_session)):
+    """DB user'lar için 5 kredi düşülür; legacy admin token bypass eder."""
     from app.tasks import map_task
+    payload = decode_token(token)
     map_id = str(uuid.uuid4())
+    require_credit(session, payload, cost=HEATMAP_COST,
+                   reason=REASON_HEATMAP, reference_id=map_id)
+    session.commit()
     store.create(map_id, {"name": req.name, "type": "map"})
     map_task.delay(map_id, req.model_dump())
     return MapJobResponse(id=map_id, status="pending", name=req.name)

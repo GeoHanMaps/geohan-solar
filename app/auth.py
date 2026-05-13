@@ -29,7 +29,7 @@ def create_access_token(sub: str, user_id: Optional[str] = None) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
-def _decode_token(token: str) -> dict:
+def decode_token(token: str) -> dict:
     exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Geçersiz veya süresi dolmuş token",
@@ -47,7 +47,7 @@ def _decode_token(token: str) -> dict:
 def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     """Return the JWT subject — UUID string for DB users, username for
     legacy admin. Routes that only need an authenticated caller use this."""
-    return _decode_token(token)["sub"]
+    return decode_token(token)["sub"]
 
 
 def get_current_db_user(
@@ -57,7 +57,7 @@ def get_current_db_user(
     """Resolve a DB-backed user. Legacy admin tokens (no `uid` claim) are
     rejected — callers that need DB user identity (credits, history) must
     have registered first."""
-    payload = _decode_token(token)
+    payload = decode_token(token)
     uid = payload.get("uid")
     if not uid:
         raise HTTPException(

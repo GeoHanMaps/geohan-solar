@@ -19,9 +19,14 @@ docker compose -f /home/geohan/geohan/geohan-solar/docker-compose.yml ps
 cd /home/geohan/geohan/geohan-solar && docker compose up -d --build
 docker compose logs -f api
 
-# Token al
+# Token al — admin login ARTIK SADECE localhost'tan çalışır.
+# Uzaktan: önce SSH tunnel aç → `ssh -L 8000:localhost:8000 geohan@178.104.69.28`
+# Sonra (lokal terminalde):
 curl -s -X POST http://localhost:8000/api/v1/auth/token \
   -d 'username=admin&password=<PASSWORD>' | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])'
+
+# Admin şifresini rotate et (sunucuda):
+# echo "API_PASSWORD=$(openssl rand -hex 32)" >> .env && docker compose restart api
 
 # Analiz gönder
 curl -s -X POST http://localhost:8000/api/v1/analyses \
