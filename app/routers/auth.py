@@ -1,3 +1,4 @@
+import ipaddress
 import secrets
 from typing import Iterator, Optional
 
@@ -16,20 +17,55 @@ from app.security import hash_password, verify_password
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-# IPs that count as "this machine" for the admin localhost gate. "testclient"
-# is starlette's TestClient peer label — never appears in real traffic.
-_LOCALHOST_IPS = {"127.0.0.1", "::1", "localhost", "testclient"}
+# Symbolic peer labels that count as "this machine" without parsing as IP.
+# "testclient" is starlette's TestClient peer; "localhost" is the literal
+# hostname some proxies forward as.
+_LOCAL_HOSTNAMES = {"localhost", "testclient"}
+
+# Explicit RFC1918 + loopback ranges. We can't use ipaddress.is_private here
+# because Python 3.11+ marks RFC5737 documentation blocks (192.0.2/24,
+# 198.51.100/24, 203.0.113/24) as private — those are exactly the IPs a
+# malicious caller would forge in X-Forwarded-For, so we reject them.
+_LOCAL_NETS = [
+    ipaddress.ip_network("127.0.0.0/8"),     # loopback
+    ipaddress.ip_network("10.0.0.0/8"),      # RFC1918
+    ipaddress.ip_network("172.16.0.0/12"),   # RFC1918 + Docker default bridges
+    ipaddress.ip_network("192.168.0.0/16"),  # RFC1918
+    ipaddress.ip_network("::1/128"),         # IPv6 loopback
+    ipaddress.ip_network("fc00::/7"),        # IPv6 unique local
+]
+
+
+def _is_local_hop(value: str) -> bool:
+    """A single hop counts as local when it's a loopback or RFC1918 address.
+
+    Production-relevant cases that must pass:
+    - 127.0.0.1 / ::1: app-internal healthcheck or loopback curl.
+    - 172.16.0.0/12 (Docker bridge), 10.0.0.0/8, 192.168.0.0/16: the
+      operator hit the published Docker port from the host or an SSH
+      tunnel, so peer.host is the bridge gateway.
+
+    Public addresses (real customers / attackers) and RFC5737
+    documentation ranges fall through, so the admin gate rejects them.
+    Customer DB-user logins are unaffected — this function is only
+    consulted on the legacy admin path."""
+    if value in _LOCAL_HOSTNAMES:
+        return True
+    try:
+        addr = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return any(addr in net for net in _LOCAL_NETS)
 
 
 def _is_localhost_request(request: Request) -> bool:
-    """True iff the request's direct peer AND every hop in X-Forwarded-For
-    are localhost. nginx behind us terminates external clients with a
-    non-local X-Forwarded-For entry, so this gate catches them even when the
-    direct peer (nginx itself) is 127.0.0.1."""
+    """True iff the direct peer AND every X-Forwarded-For hop is local
+    (loopback or private). A public IP anywhere in the chain fails the
+    gate — protecting against spoofed XFF or a misconfigured proxy."""
     direct = request.client.host if request.client else ""
     fwd = request.headers.get("X-Forwarded-For", "")
     hops = [h.strip() for h in fwd.split(",") if h.strip()]
-    return all(ip in _LOCALHOST_IPS for ip in [direct, *hops])
+    return all(_is_local_hop(ip) for ip in [direct, *hops])
 
 
 def session_or_none() -> Iterator[Optional[Session]]:
