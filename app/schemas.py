@@ -226,3 +226,23 @@ class BatchJobResponse(BaseModel):
     completed:       int       = 0
     results:         list[BatchLocationResult] = []
     error:           Optional[str] = None
+
+
+# ─── Sprint 9 M2: Auth / kullanıcı şemaları ─────────────────────────────────
+
+class RegisterRequest(BaseModel):
+    email:    str = Field(..., min_length=3, max_length=320,
+                          description="Kullanıcı e-postası")
+    password: str = Field(..., min_length=8, max_length=128,
+                          description="Şifre (en az 8 karakter)")
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type:   str = "bearer"
+
+
+class UserResponse(BaseModel):
+    id:      str
+    email:   str
+    credits: int
