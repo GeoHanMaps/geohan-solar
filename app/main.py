@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.gee_init import initialize_ee
 from app.limiter import limiter
-from app.routers import analyses, batch, auth
+from app.routers import analyses, auth, batch, credits
 from app.schemas import HealthResponse
 
 
@@ -66,6 +66,7 @@ app.add_middleware(
 from app.routers.maps import router_maps, router_boundaries
 
 app.include_router(auth.router)
+app.include_router(credits.router)
 app.include_router(analyses.router)
 app.include_router(batch.router)
 app.include_router(router_maps)

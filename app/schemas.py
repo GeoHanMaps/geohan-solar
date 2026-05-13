@@ -246,3 +246,24 @@ class UserResponse(BaseModel):
     id:      str
     email:   str
     credits: int
+
+
+# ─── Sprint 9 M3: Credit ledger şemaları ────────────────────────────────────
+
+class BalanceResponse(BaseModel):
+    user_id: str
+    credits: int
+
+
+class CreditTransactionItem(BaseModel):
+    id:            str
+    amount:        int
+    balance_after: int
+    reason:        str
+    reference_id:  Optional[str] = None
+    created_at:    str
+
+
+class CreditHistoryResponse(BaseModel):
+    items: list[CreditTransactionItem]
+    total: int
