@@ -4,11 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      force_deploy:
-        description: "Force deploy even without changes"
-        required: false
-        default: "false"
 
 jobs:
   build-push:
@@ -22,9 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -57,81 +50,69 @@ jobs:
       packages: read
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add server to known_hosts
+        run: ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
         env:
+          H: ${{ secrets.DEPLOY_HOST }}
+          U: ${{ secrets.DEPLOY_USER }}
+          IMAGE: ghcr.io/geohanmaps/geohan-api:${{ needs.build-push.outputs.image_tag }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER
-          script: |
-            set -euo pipefail
-            cd /home/geohan/geohan/geohan-solar
+        run: |
+          envsubst '$IMAGE $GHCR_TOKEN $GHCR_USER' << 'SCRIPT' | ssh "${U}@${H}" bash -s
+          set -euo pipefail
+          cd /home/geohan/geohan/geohan-solar
+          git fetch origin main
+          git reset --hard origin/main
 
-            git fetch origin main
-            git reset --hard origin/main
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            IMAGE="ghcr.io/geohanmaps/geohan-api:${{ needs.build-push.outputs.image_tag }}"
+          API_CID=$(docker compose -f docker-compose.prod.yml ps -q api 2>/dev/null || true)
+          PREV_IMAGE=$([ -n "$API_CID" ] && docker inspect "$API_CID" --format '{{.Image}}' 2>/dev/null || echo "")
+          echo "Deploying: $IMAGE"
 
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          if grep -q '^API_IMAGE=' .env; then
+            sed -i "s|^API_IMAGE=.*|API_IMAGE=$IMAGE|" .env
+          else
+            echo "API_IMAGE=$IMAGE" >> .env
+          fi
 
-            # Önceki image SHA'sını kaydet (rollback için)
-            API_CID=$(docker compose -f docker-compose.prod.yml ps -q api 2>/dev/null || true)
-            PREV_IMAGE=$([ -n "$API_CID" ] && docker inspect "$API_CID" --format '{{.Image}}' 2>/dev/null || echo "")
+          docker pull "$IMAGE"
+          docker compose -f docker-compose.prod.yml up -d api worker
 
-            echo "Deploying: $IMAGE"
-            echo "Previous:  $PREV_IMAGE"
+          for i in $(seq 1 6); do
+            sleep 5
+            STATE=$(docker compose -f docker-compose.prod.yml ps api --format json 2>/dev/null \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['State'] if isinstance(d,list) else d['State'])" 2>/dev/null || echo "unknown")
+            [ "$STATE" = "running" ] && break
+            echo "  API bekleniyor... ($i/6) — $STATE"
+          done
+          docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
 
-            # .env içinde API_IMAGE'ı güncelle
-            if grep -q '^API_IMAGE=' .env; then
-              sed -i "s|^API_IMAGE=.*|API_IMAGE=$IMAGE|" .env
-            else
-              echo "API_IMAGE=$IMAGE" >> .env
+          HEALTHY=0
+          for i in $(seq 1 12); do
+            sleep 5
+            STATUS=$(curl -sf http://localhost:8000/api/v1/health \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" \
+              2>/dev/null || echo "error")
+            [ "$STATUS" = "ok" ] && HEALTHY=1 && break
+            echo "  Bekleniyor... ($i/12) — $STATUS"
+          done
+
+          if [ "$HEALTHY" -eq 0 ]; then
+            echo "HATA: health check başarısız — rollback"
+            if [ -n "$PREV_IMAGE" ]; then
+              sed -i "s|^API_IMAGE=.*|API_IMAGE=$PREV_IMAGE|" .env
+              docker pull "$PREV_IMAGE" 2>/dev/null || true
+              docker compose -f docker-compose.prod.yml up -d api worker
             fi
-
-            # Yeni image'ı çek ve servisleri başlat
-            docker pull "$IMAGE"
-            docker compose -f docker-compose.prod.yml up -d api worker
-
-            # DB migration — container running olana kadar bekle (max 30s)
-            for i in $(seq 1 6); do
-              sleep 5
-              STATE=$(docker compose -f docker-compose.prod.yml ps api --format json 2>/dev/null \
-                | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['State'] if isinstance(d,list) else d['State'])" 2>/dev/null || echo "unknown")
-              [ "$STATE" = "running" ] && break
-              echo "  API container bekleniyor... ($i/6) — $STATE"
-            done
-            docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
-
-            # Health check — 60 saniye boyunca dene
-            echo "Health check başlıyor..."
-            HEALTHY=0
-            for i in $(seq 1 12); do
-              sleep 5
-              STATUS=$(curl -sf http://localhost:8000/api/v1/health \
-                | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" \
-                2>/dev/null || echo "error")
-              if [ "$STATUS" = "ok" ]; then
-                echo "  Sağlıklı (${i}x5s)"
-                HEALTHY=1
-                break
-              fi
-              echo "  Bekleniyor... ($i/12) — $STATUS"
-            done
-
-            if [ "$HEALTHY" -eq 0 ]; then
-              echo "HATA: Health check başarısız — rollback yapılıyor"
-              if [ -n "$PREV_IMAGE" ]; then
-                sed -i "s|^API_IMAGE=.*|API_IMAGE=$PREV_IMAGE|" .env
-                docker pull "$PREV_IMAGE" 2>/dev/null || true
-                docker compose -f docker-compose.prod.yml up -d api worker
-                echo "Rollback tamamlandı: $PREV_IMAGE"
-              fi
-              exit 1
-            fi
-
-            echo "Deploy başarılı: $IMAGE"
-            docker compose -f docker-compose.prod.yml ps
+            exit 1
+          fi
+          echo "Deploy başarılı: $IMAGE"
+          SCRIPT
