@@ -246,9 +246,11 @@ def generate(
     ghi = _idw_ghi(rows, cols, minx, miny, maxx, maxy)
 
     # 5. Mesafe skoru — 5-nokta IDW (country_code grid sorguya aktarılır)
+    def _grid_sampler(la, lo):
+        return grid_svc.nearest_substation_km(la, lo, country_code)
+
     grid_arr = _idw_pts(rows, cols, minx, miny, maxx, maxy,
-                        sampler=lambda la, lo: grid_svc.nearest_substation_km(la, lo, country_code),
-                        fallback=5.0)
+                        sampler=_grid_sampler, fallback=5.0)
     road_arr = _idw_pts(rows, cols, minx, miny, maxx, maxy,
                         sampler=access_svc.nearest_road_km,
                         fallback=1.0)
