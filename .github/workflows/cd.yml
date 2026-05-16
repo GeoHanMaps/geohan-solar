@@ -68,20 +68,14 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: GHCR_TOKEN,GHCR_USER
           script: |
-            exec > >(tee /tmp/cd_debug.log) 2>&1
-            trap 'echo "ERR at line $LINENO: $BASH_COMMAND"' ERR
             set -euo pipefail
             cd /home/geohan/geohan/geohan-solar
 
-            echo "=== git fetch ==="
             git fetch origin main
             git reset --hard origin/main
 
             IMAGE="ghcr.io/geohanmaps/geohan-api:${{ needs.build-push.outputs.image_tag }}"
 
-            echo "=== docker login ==="
-            echo "GHCR_USER=$GHCR_USER"
-            echo "GHCR_TOKEN length=${#GHCR_TOKEN}"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             # Önceki image SHA'sını kaydet (rollback için)
