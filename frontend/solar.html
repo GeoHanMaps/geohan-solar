@@ -103,6 +103,11 @@
         <option value="dark">Karanlık (Carto)</option>
         <option value="topo">Topoğrafik (OSM)</option>
       </select>
+
+      <button id="layout-btn" class="btn-secondary" onclick="toggleLayout()"
+              style="margin-top:12px;width:100%;display:none">
+        ⚡ Santral Simülasyonu
+      </button>
     </div>
   </aside>
 
@@ -119,6 +124,16 @@
       <div class="legend-block">
         <div class="legend-block-swatch"></div>
         <span>Yasal Kısıt</span>
+      </div>
+      <div id="layout-legend" style="display:none;margin-top:10px;border-top:1px solid rgba(255,255,255,.15);padding-top:8px">
+        <div style="font-size:11px;font-weight:600;margin-bottom:6px;color:rgba(255,255,255,.7)">SANTRAL KATMANLARI</div>
+        <div class="legend-block"><div style="width:14px;height:10px;background:#1b3a5b;opacity:.7;border:1px solid #5b8fc7;border-radius:2px"></div><span>Panel Blok</span></div>
+        <div class="legend-block"><div style="width:14px;height:2px;background:#d9c089;border-radius:1px"></div><span>İç Yol</span></div>
+        <div class="legend-block"><div style="width:14px;height:14px;border-radius:50%;background:#f0a13a;border:2px solid #fff"></div><span>Trafo Pad</span></div>
+        <div class="legend-block"><div style="width:14px;height:14px;border-radius:50%;background:#e8c14f;border:2px solid #222"></div><span>Şalt (POC)</span></div>
+        <div class="legend-block"><div style="width:14px;height:2px;background:#e8c14f;border-radius:1px"></div><span>Bağlantı Güzergâhı</span></div>
+        <div class="legend-block"><div style="width:14px;height:2px;background:#d33;border-radius:1px"></div><span>OSM İletim Hattı (≥220kV)</span></div>
+        <div class="legend-block"><div style="width:14px;height:14px;border-radius:50%;background:#d33;border:2px solid #fff"></div><span>OSM Trafo Merkezi</span></div>
       </div>
     </div>
   </section>
@@ -163,6 +178,14 @@
       <div class="panel-section" id="narrative-section" style="display:none">
         <h3>AI Yorum</h3>
         <p id="narrative-text" class="narrative"></p>
+      </div>
+
+      <div class="panel-section" id="layout-section" style="display:none">
+        <h3>Santral <span class="hint">(Simülasyon)</span></h3>
+        <div class="kv-row"><span>DC Kapasite</span><span class="kv-val" id="lyt-dc-mw">—</span></div>
+        <div class="kv-row"><span>AC Kapasite</span><span class="kv-val" id="lyt-ac-mw">—</span></div>
+        <div class="kv-row"><span>Trafo Sayısı</span><span class="kv-val" id="lyt-n-tx">—</span></div>
+        <div class="kv-row"><span>Bağlantı Uzunluğu</span><span class="kv-val" id="lyt-km">—</span></div>
       </div>
 
       <div class="panel-section">

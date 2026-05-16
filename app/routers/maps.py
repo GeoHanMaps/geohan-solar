@@ -24,7 +24,7 @@ from app.limiter import limiter
 from app.config import settings
 from app.models.credit_transaction import REASON_HEATMAP
 from app.models.job_record import KIND_MAP
-from app.schemas import MapRequest, MapJobResponse, MapStats, BoundaryResult
+from app.schemas import MapRequest, MapJobResponse, MapStats, BoundaryResult, LayoutResponse, LayoutSummary
 from app.services import jobs
 from app.services.credits import require_credit
 
@@ -155,6 +155,43 @@ def get_geotiff(map_id: str, token: str = Depends(_oauth2),
         io.BytesIO(p.read_bytes()),
         media_type="image/tiff",
         headers={"Content-Disposition": f'attachment; filename="geohan_map_{map_id[:8]}.tif"'},
+    )
+
+
+@router_maps.get("/{map_id}/layout", response_model=LayoutResponse,
+                 summary="GES simülasyon katmanı (lazy, ilk GET'te hesaplanır)")
+def get_layout(map_id: str, token: str = Depends(_oauth2),
+               session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=map_id,
+                               token_payload=decode_token(token))
+    if not job:
+        raise HTTPException(status_code=404, detail="Map job bulunamadı")
+    if job["status"] != "done":
+        raise HTTPException(status_code=425, detail="Harita henüz hazır değil")
+
+    tiff_path = (job.get("result") or {}).get("tiff_path")
+    if not tiff_path or not Path(tiff_path).exists():
+        raise HTTPException(status_code=404, detail="GeoTIFF dosyası bulunamadı")
+
+    from app.models.job_record import JobRecord
+    rec = session.get(JobRecord, map_id)
+    params = (rec.params or {}) if rec else {}
+    country_code = params.get("country_code", "DEFAULT")
+    panel_tech   = params.get("panel_tech", "mono")
+    tracking     = params.get("tracking", "fixed")
+
+    from app.services import layout as layout_svc
+    result = layout_svc.generate(
+        tiff_path=tiff_path,
+        map_id=map_id,
+        data_dir=settings.maps_data_dir,
+        country_code=country_code,
+        panel_tech=panel_tech,
+        tracking=tracking,
+    )
+    return LayoutResponse(
+        summary=LayoutSummary(**result["summary"]),
+        geojson=result["geojson"],
     )
 
 

@@ -25,7 +25,7 @@ _log = logging.getLogger(__name__)
 
 # Only ever delete files this module's producer creates — never recurse,
 # never touch anything unexpected in the directory.
-_MANAGED_SUFFIXES = (".tif", "_constraints.geojson")
+_MANAGED_SUFFIXES = (".tif", "_constraints.geojson", "_layout.geojson", "_layout.json")
 
 
 def purge_expired_artifacts(

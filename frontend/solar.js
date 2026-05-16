@@ -5,6 +5,7 @@ let vertices = [], vertexMarkers = [];
 let currentMapId = null, pollInterval = null;
 let currentAnalysisId = null, analysisPoll = null;
 let currentBasemap = 'satellite';
+let layoutVisible = false;
 // "Tahmini kapasite" = centroid mw_per_ha × heatmap alanı (ha). İki kaynak
 // (heatmap stats + centroid analizi) farklı zamanlarda gelir; ikisi de
 // gelince hesaplanır.
@@ -189,10 +190,12 @@ function clearPolygon() {
   if (map.getLayer('polygon-outline')) map.removeLayer('polygon-outline');
   if (map.getSource('polygon'))        map.removeSource('polygon');
   removeHeatmap();
+  removeLayoutLayers();
   document.getElementById('clear-btn').style.display = 'none';
   document.getElementById('vertex-count').style.display = 'none';
   document.getElementById('analyse-btn').disabled = true;
   document.getElementById('legend').style.display = 'none';
+  document.getElementById('layout-btn').style.display = 'none';
   resetRightPanel();
   setStatus('');
 }
@@ -201,6 +204,7 @@ function resetRightPanel() {
   document.getElementById('right-empty').style.display = 'flex';
   document.getElementById('right-content').style.display = 'none';
   document.getElementById('pdf-btn').disabled = true;
+  document.getElementById('layout-section').style.display = 'none';
   lastAreaKm2 = null;
   lastMwPerHa = null;
 }
@@ -365,6 +369,7 @@ async function pollMapJob() {
       loadHeatmap(currentMapId);
       document.getElementById('analyse-btn').disabled = false;
       document.getElementById('legend').style.display = 'block';
+      document.getElementById('layout-btn').style.display = 'block';
     }
     if (job.status === 'failed') {
       clearInterval(pollInterval); pollInterval = null;
@@ -406,6 +411,7 @@ function removeHeatmap() {
   if (map.getSource('constraints'))  map.removeSource('constraints');
   if (map.getLayer('heatmap-layer')) map.removeLayer('heatmap-layer');
   if (map.getSource('heatmap'))      map.removeSource('heatmap');
+  removeLayoutLayers();
 }
 
 async function loadConstraints(mapId) {
@@ -572,6 +578,113 @@ async function downloadPdf() {
     a.href = url; a.download = `GeoHan_${currentAnalysisId}.pdf`;
     a.click(); URL.revokeObjectURL(url);
   } catch {}
+}
+
+// ── Layout katmanı ─────────────────────────────────────────────────
+const _LYT_LAYERS = [
+  'lyt-buildable', 'lyt-setback', 'lyt-blocks-fill', 'lyt-blocks-line',
+  'lyt-roads', 'lyt-tx', 'lyt-poc', 'lyt-interconnect', 'lyt-access',
+  'lyt-osm-lines', 'lyt-osm-subs',
+];
+const _LYT_SOURCES = ['lyt-src'];
+
+function removeLayoutLayers() {
+  for (const id of _LYT_LAYERS) if (map.getLayer(id)) map.removeLayer(id);
+  for (const id of _LYT_SOURCES) if (map.getSource(id)) map.removeSource(id);
+  layoutVisible = false;
+  document.getElementById('layout-btn').classList.remove('active');
+  document.getElementById('layout-legend').style.display = 'none';
+  document.getElementById('layout-section').style.display = 'none';
+}
+
+async function toggleLayout() {
+  if (!currentMapId) return;
+  if (layoutVisible) { removeLayoutLayers(); return; }
+  const btn = document.getElementById('layout-btn');
+  btn.disabled = true;
+  btn.textContent = '⚡ Yükleniyor…';
+  try {
+    const r = await apiFetch(`/api/v1/maps/${currentMapId}/layout`);
+    if (!r.ok) { btn.textContent = '⚡ Santral Simülasyonu'; btn.disabled = false; return; }
+    const data = await r.json();
+    addLayoutLayers(data.geojson, data.summary);
+    layoutVisible = true;
+    btn.classList.add('active');
+    btn.textContent = '⚡ Simülasyonu Gizle';
+    document.getElementById('layout-legend').style.display = 'block';
+  } catch { /* silently fail */ }
+  btn.disabled = false;
+}
+
+function addLayoutLayers(geojson, summary) {
+  removeLayoutLayers();
+  map.addSource('lyt-src', { type: 'geojson', data: geojson });
+
+  const layer = (id, type, filter, paint, layout) => {
+    const spec = { id, type, source: 'lyt-src', filter, paint };
+    if (layout) spec.layout = layout;
+    map.addLayer(spec);
+  };
+
+  layer('lyt-buildable', 'fill',
+    ['==', ['get', 'layer'], 'buildable_area'],
+    { 'fill-color': '#14a085', 'fill-opacity': 0.06 });
+
+  layer('lyt-setback', 'line',
+    ['==', ['get', 'layer'], 'setback'],
+    { 'line-color': '#7a8a99', 'line-width': 1, 'line-dasharray': [1, 2], 'line-opacity': 0.5 });
+
+  layer('lyt-blocks-fill', 'fill',
+    ['==', ['get', 'layer'], 'panel_block'],
+    { 'fill-color': '#1b3a5b', 'fill-opacity': 0.55 });
+
+  layer('lyt-blocks-line', 'line',
+    ['==', ['get', 'layer'], 'panel_block'],
+    { 'line-color': '#5b8fc7', 'line-width': 0.5 });
+
+  layer('lyt-roads', 'line',
+    ['==', ['get', 'layer'], 'internal_road'],
+    { 'line-color': '#d9c089', 'line-width': 1, 'line-dasharray': [3, 2] });
+
+  layer('lyt-tx', 'circle',
+    ['==', ['get', 'layer'], 'transformer_pad'],
+    { 'circle-radius': 6, 'circle-color': '#f0a13a', 'circle-stroke-width': 1.5, 'circle-stroke-color': '#fff' });
+
+  layer('lyt-poc', 'circle',
+    ['==', ['get', 'layer'], 'plant_substation'],
+    { 'circle-radius': 8, 'circle-color': '#e8c14f', 'circle-stroke-width': 2, 'circle-stroke-color': '#222' });
+
+  layer('lyt-interconnect', 'line',
+    ['==', ['get', 'layer'], 'interconnect_route'],
+    { 'line-color': '#e8c14f', 'line-width': 2.5, 'line-dasharray': [2, 1] });
+
+  layer('lyt-access', 'line',
+    ['==', ['get', 'layer'], 'access_route'],
+    { 'line-color': '#cfcfcf', 'line-width': 1.5, 'line-dasharray': [2, 2] });
+
+  // OSM iletim hatları — voltaja göre renk
+  layer('lyt-osm-lines', 'line',
+    ['==', ['get', 'layer'], 'osm_line'],
+    {
+      'line-color': [
+        'step', ['coalesce', ['get', 'kv'], 0],
+        '#999', 66, '#e90', 220, '#d33',
+      ],
+      'line-width': 1.5,
+    });
+
+  layer('lyt-osm-subs', 'circle',
+    ['==', ['get', 'layer'], 'osm_substation'],
+    { 'circle-radius': 5, 'circle-color': '#d33', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' });
+
+  // Sağ panel güncelle
+  if (summary) {
+    document.getElementById('layout-section').style.display = 'block';
+    document.getElementById('lyt-dc-mw').textContent  = summary.dc_mw.toFixed(1) + ' MW';
+    document.getElementById('lyt-ac-mw').textContent  = summary.ac_mw.toFixed(1) + ' MW';
+    document.getElementById('lyt-n-tx').textContent   = summary.n_transformers;
+    document.getElementById('lyt-km').textContent     = summary.interconnect_km.toFixed(1) + ' km';
+  }
 }
 
 // ── Status ─────────────────────────────────────────────────────────

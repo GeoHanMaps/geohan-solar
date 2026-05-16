@@ -270,3 +270,24 @@ class CreditTransactionItem(BaseModel):
 class CreditHistoryResponse(BaseModel):
     items: list[CreditTransactionItem]
     total: int
+
+
+# ─── Faz 2: GES Simülasyon Katmanı ──────────────────────────────────────────
+
+class LayoutSummary(BaseModel):
+    dc_mw: float
+    ac_mw: float
+    n_blocks: int
+    n_transformers: int
+    buildable_ha: float
+    gcr_effective: float
+    interconnect_km: float
+    interconnect_capex_usd: float
+    target_substation_kv: Optional[float] = None
+    slope_assumed: bool = False
+    synthetic_grid: bool = False
+
+
+class LayoutResponse(BaseModel):
+    summary: LayoutSummary
+    geojson: dict
