@@ -53,14 +53,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-push
     environment: production
+    permissions:
+      packages: read
 
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER
           script: |
             set -euo pipefail
             cd /home/geohan/geohan/geohan-solar
@@ -69,6 +75,9 @@ jobs:
             git reset --hard origin/main
 
             IMAGE="ghcr.io/geohanmaps/geohan-api:${{ needs.build-push.outputs.image_tag }}"
+
+            # GHCR login — GITHUB_TOKEN workflow süresince geçerli
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             # Önceki image SHA'sını kaydet (rollback için)
             API_CID=$(docker compose -f docker-compose.prod.yml ps -q api 2>/dev/null || true)
