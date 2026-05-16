@@ -65,7 +65,7 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: GHCR_TOKEN,GHCR_USER
           script: |
             set -euo pipefail
