@@ -89,6 +89,10 @@ jobs:
             docker pull "$IMAGE"
             docker compose -f docker-compose.prod.yml up -d api worker
 
+            # DB migration — yeni container ayağa kalktıktan sonra
+            sleep 5
+            docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
+
             # Health check — 60 saniye boyunca dene
             echo "Health check başlıyor..."
             HEALTHY=0
