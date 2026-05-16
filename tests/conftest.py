@@ -69,7 +69,8 @@ def ensure_postgres_schema():
     """CI only: DATABASE_URL=postgresql → create all tables before any test
     module setup runs. Without this, the module-scoped valid_token fixture
     in test_auth.py reaches session_or_none before db_override is active,
-    queries a Postgres with no tables, and raises ProgrammingError → 500."""
+    queries a Postgres with no tables, and raises ProgrammingError → 500.
+    Connection failure is silently ignored so non-CI runs are unaffected."""
     import os
     from sqlalchemy import create_engine
     db_url = os.getenv("DATABASE_URL", "")
@@ -81,7 +82,10 @@ def ensure_postgres_schema():
     import app.models.job_record  # noqa: F401
     from app.db import Base
     eng = create_engine(db_url, future=True)
-    Base.metadata.create_all(eng)
+    try:
+        Base.metadata.create_all(eng)
+    except Exception:
+        pass  # Postgres unreachable (non-CI env) — skip silently
     yield
     eng.dispose()
 
