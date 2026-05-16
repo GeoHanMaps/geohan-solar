@@ -65,6 +65,28 @@ def fake_redis_store():
 
 
 @pytest.fixture(autouse=True, scope="session")
+def ensure_postgres_schema():
+    """CI only: DATABASE_URL=postgresql → create all tables before any test
+    module setup runs. Without this, the module-scoped valid_token fixture
+    in test_auth.py reaches session_or_none before db_override is active,
+    queries a Postgres with no tables, and raises ProgrammingError → 500."""
+    import os
+    from sqlalchemy import create_engine
+    db_url = os.getenv("DATABASE_URL", "")
+    if not db_url.startswith("postgresql"):
+        yield
+        return
+    import app.models.user  # noqa: F401
+    import app.models.credit_transaction  # noqa: F401
+    import app.models.job_record  # noqa: F401
+    from app.db import Base
+    eng = create_engine(db_url, future=True)
+    Base.metadata.create_all(eng)
+    yield
+    eng.dispose()
+
+
+@pytest.fixture(autouse=True, scope="session")
 def eager_celery():
     """
     Celery task'larını broker olmadan senkron çalıştır.
