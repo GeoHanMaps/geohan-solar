@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 from celery.signals import worker_process_init
 from app.config import settings
 
@@ -27,4 +28,12 @@ celery_app.conf.update(
     task_acks_late=True,           # worker crash'te task yeniden kuyruğa girer
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,  # her worker bir task alır, adil dağılım
+    # Günlük artefakt retention (worker'ı -B ile çalıştır; yoksa cron ile
+    # `celery -A app.celery_app call geohan.cleanup_artifacts`).
+    beat_schedule={
+        "cleanup-expired-artifacts": {
+            "task": "geohan.cleanup_artifacts",
+            "schedule": crontab(hour=3, minute=17),
+        },
+    },
 )

@@ -16,7 +16,7 @@ from app.schemas import (
 )
 from app.services import (
     terrain, solar, grid, access, capacity,
-    mcda, financial, legal, downscale, narrative,
+    mcda, financial, legal, downscale, narrative, retention, cache,
 )
 
 
@@ -197,6 +197,8 @@ def batch_task(self, batch_id: str, req_data: dict) -> None:
                  name="geohan.map")
 def map_task(self, map_id: str, req_data: dict) -> None:
     """Polygon için MCDA raster üret, COG olarak kaydet."""
+    import math
+
     import rasterio
     from app.services import heatmap
     from app.config import settings
@@ -224,15 +226,46 @@ def map_task(self, map_id: str, req_data: dict) -> None:
 
         with rasterio.open(tiff_path) as src:
             data = src.read(1)
+            px_w_deg = abs(src.transform.a)   # piksel genişliği (derece)
+            px_h_deg = abs(src.transform.e)   # piksel yüksekliği (derece)
+            lat_c = (src.bounds.bottom + src.bounds.top) / 2.0
 
         valid = data[(data > 0) & (data <= 100)]
+        pixel_count = int(valid.size)
+        # EPSG:4326 raster → metrik alan (boylamda cos(lat) düzeltmeli).
+        # resolution_m, heatmap.generate içinde _auto_resolution ile değişebildiği
+        # için raster'ın kendi geotransform'undan hesaplanır.
+        m_per_deg_lat = 110_540.0
+        m_per_deg_lon = 111_320.0 * math.cos(math.radians(lat_c))
+        px_area_km2 = (px_w_deg * m_per_deg_lon) * (px_h_deg * m_per_deg_lat) / 1_000_000.0
         store.set_done(map_id, {
             "tiff_path":       tiff_path,
             "constraint_path": constraint_path,
-            "score_min":  float(valid.min())  if len(valid) else 0.0,
-            "score_max":  float(valid.max())  if len(valid) else 0.0,
-            "score_mean": float(valid.mean()) if len(valid) else 0.0,
+            "score_min":   float(valid.min())  if pixel_count else 0.0,
+            "score_max":   float(valid.max())  if pixel_count else 0.0,
+            "score_mean":  float(valid.mean()) if pixel_count else 0.0,
+            "area_km2":    round(pixel_count * px_area_km2, 2),
+            "pixel_count": pixel_count,
         })
 
     except Exception as exc:
         store.set_failed(map_id, str(exc))
+
+
+# ─── Artefakt retention ───────────────────────────────────────────────────────
+
+@celery_app.task(name="geohan.cleanup_artifacts")
+def cleanup_artifacts_task() -> int:
+    """Periyodik (Celery beat) — iki sınırsız-büyüme kaynağını süpürür:
+    (1) süresi dolmuş heatmap raster/constraint dosyaları (dayanıklı
+    metadata job_records'ta kalır; tile/geotiff yoksa 404 döner),
+    (2) süresi dolmuş upstream spatial-cache (OSM/GHI) JSON dosyaları —
+    `cache.clear_expired()` başka hiçbir yerden çağrılmıyordu.
+    Dönüş: toplam silinen dosya sayısı."""
+    from app.config import settings
+
+    deleted = retention.purge_expired_artifacts(
+        settings.maps_data_dir, settings.maps_retention_days,
+    )
+    expired_cache = cache.clear_expired()
+    return len(deleted) + expired_cache
