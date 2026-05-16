@@ -167,9 +167,11 @@ class MapRequest(BaseModel):
 
 
 class MapStats(BaseModel):
-    score_min:  float
-    score_max:  float
-    score_mean: float
+    score_min:   float
+    score_max:   float
+    score_mean:  float
+    area_km2:    float = 0.0
+    pixel_count: int   = 0
 
 
 class MapJobResponse(BaseModel):

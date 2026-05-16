@@ -108,6 +108,7 @@ def db_engine():
     # Import models so their tables register on Base.metadata.
     from app.models import user as _user  # noqa: F401
     from app.models import credit_transaction as _ct  # noqa: F401
+    from app.models import job_record as _jr  # noqa: F401
 
     engine = create_engine(
         "sqlite:///:memory:",

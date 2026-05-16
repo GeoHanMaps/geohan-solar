@@ -23,7 +23,9 @@ from app.db import get_session
 from app.limiter import limiter
 from app.config import settings
 from app.models.credit_transaction import REASON_HEATMAP
+from app.models.job_record import KIND_MAP
 from app.schemas import MapRequest, MapJobResponse, MapStats, BoundaryResult
+from app.services import jobs
 from app.services.credits import require_credit
 
 # Flat 5-credit charge for any heatmap. Area-tiered pricing (5 / 10 by
@@ -50,16 +52,22 @@ def create_map(request: Request, req: MapRequest,
     map_id = str(uuid.uuid4())
     require_credit(session, payload, cost=HEATMAP_COST,
                    reason=REASON_HEATMAP, reference_id=map_id)
+    uid, _ = jobs.identify(payload)
+    params = req.model_dump()
+    jobs.record_create(session, job_id=map_id, kind=KIND_MAP,
+                       name=req.name, params=params, user_id=uid)
     session.commit()
     store.create(map_id, {"name": req.name, "type": "map"})
-    map_task.delay(map_id, req.model_dump())
+    map_task.delay(map_id, params)
     return MapJobResponse(id=map_id, status="pending", name=req.name)
 
 
 @router_maps.get("/{map_id}", response_model=MapJobResponse,
                  summary="Harita iş durumu")
-def get_map(map_id: str, _: str = Depends(get_current_user)):
-    job = store.get(map_id)
+def get_map(map_id: str, token: str = Depends(_oauth2),
+            session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=map_id,
+                               token_payload=decode_token(token))
     if not job:
         raise HTTPException(status_code=404, detail="Map job bulunamadı")
 
@@ -71,6 +79,8 @@ def get_map(map_id: str, _: str = Depends(get_current_user)):
             score_min=r["score_min"],
             score_max=r["score_max"],
             score_mean=r["score_mean"],
+            area_km2=r.get("area_km2", 0.0),
+            pixel_count=r.get("pixel_count", 0),
         )
         tile_url = f"/api/v1/maps/{map_id}/tiles/{{z}}/{{x}}/{{y}}.png"
 
@@ -87,8 +97,10 @@ def get_map(map_id: str, _: str = Depends(get_current_user)):
 @router_maps.get("/{map_id}/tiles/{z}/{x}/{y}.png",
                  summary="XYZ tile (RdYlGn PNG)")
 def get_tile(map_id: str, z: int, x: int, y: int,
-             _: str = Depends(get_current_user)):
-    job = store.get(map_id)
+             token: str = Depends(_oauth2),
+             session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=map_id,
+                               token_payload=decode_token(token))
     if not job:
         raise HTTPException(status_code=404, detail="Map job bulunamadı")
     if job["status"] != "done":
@@ -105,8 +117,10 @@ def get_tile(map_id: str, z: int, x: int, y: int,
 
 
 @router_maps.get("/{map_id}/constraints", summary="Yasal kısıt noktaları (GeoJSON)")
-def get_constraints(map_id: str, _: str = Depends(get_current_user)):
-    job = store.get(map_id)
+def get_constraints(map_id: str, token: str = Depends(_oauth2),
+                    session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=map_id,
+                               token_payload=decode_token(token))
     if not job:
         raise HTTPException(status_code=404, detail="Map job bulunamadı")
     if job["status"] != "done":
@@ -123,8 +137,10 @@ def get_constraints(map_id: str, _: str = Depends(get_current_user)):
 
 
 @router_maps.get("/{map_id}/geotiff", summary="Ham GeoTIFF indir")
-def get_geotiff(map_id: str, _: str = Depends(get_current_user)):
-    job = store.get(map_id)
+def get_geotiff(map_id: str, token: str = Depends(_oauth2),
+                session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=map_id,
+                               token_payload=decode_token(token))
     if not job:
         raise HTTPException(status_code=404, detail="Map job bulunamadı")
     if job["status"] != "done":

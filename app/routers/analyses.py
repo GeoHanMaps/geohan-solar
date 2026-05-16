@@ -7,14 +7,16 @@ import io
 from sqlalchemy.orm import Session
 
 from app import store
-from app.auth import decode_token, get_current_user
+from app.auth import decode_token
 from app.db import get_session
 from app.limiter import limiter
 from app.config import settings
 from app.models.credit_transaction import REASON_ANALYSIS
+from app.models.job_record import KIND_ANALYSIS
 from app.schemas import (
     AnalysisRequest, AnalysisResult, JobResponse, JobListItem,
 )
+from app.services import jobs
 from app.services.credits import require_credit
 
 ANALYSIS_COST = 1
@@ -43,20 +45,35 @@ def create_analysis(request: Request, req: AnalysisRequest,
     job_id = str(uuid.uuid4())
     require_credit(session, payload, cost=ANALYSIS_COST,
                    reason=REASON_ANALYSIS, reference_id=job_id)
+    uid, _ = jobs.identify(payload)
+    params = req.model_dump()
+    # Durable ownership row, same transaction as the credit debit.
+    jobs.record_create(session, job_id=job_id, kind=KIND_ANALYSIS,
+                       name=req.name, params=params, user_id=uid)
     session.commit()
     store.create(job_id, {"name": req.name})
-    analyse_task.delay(job_id, req.model_dump())
+    analyse_task.delay(job_id, params)
     return JobResponse(id=job_id, status="pending", name=req.name)
 
 
-@router.get("", response_model=list[JobListItem], summary="Tüm işler")
-def list_analyses(_: str = Depends(get_current_user)):
-    return store.list_all()
+@router.get("", response_model=list[JobListItem], summary="İşlerim")
+def list_analyses(token: str = Depends(_oauth2),
+                  session: Session = Depends(get_session)):
+    """DB kullanıcısı → yalnızca kendi analizleri (Postgres). Legacy/admin
+    token → eski global görünüm (store)."""
+    uid, is_admin = jobs.identify(decode_token(token))
+    if is_admin:
+        return store.list_all()
+    return [JobListItem(id=r.id, status=r.status, name=r.name)
+            for r in jobs.record_list(session, user_id=uid,
+                                      kind=KIND_ANALYSIS)]
 
 
 @router.get("/{job_id}", response_model=JobResponse, summary="İş durumu ve sonuç")
-def get_analysis(job_id: str, _: str = Depends(get_current_user)):
-    job = store.get(job_id)
+def get_analysis(job_id: str, token: str = Depends(_oauth2),
+                 session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=job_id,
+                               token_payload=decode_token(token))
     if not job:
         raise HTTPException(status_code=404, detail="Job bulunamadı")
 
@@ -74,8 +91,10 @@ def get_analysis(job_id: str, _: str = Depends(get_current_user)):
 
 
 @router.get("/{job_id}/score", summary="Sadece skor özeti")
-def get_score(job_id: str, _: str = Depends(get_current_user)):
-    job = store.get(job_id)
+def get_score(job_id: str, token: str = Depends(_oauth2),
+              session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=job_id,
+                               token_payload=decode_token(token))
     if not job:
         raise HTTPException(status_code=404, detail="Job bulunamadı")
     if job["status"] != "done":
@@ -91,8 +110,10 @@ def get_score(job_id: str, _: str = Depends(get_current_user)):
 
 @router.get("/{job_id}/report", summary="PDF rapor indir",
             response_class=StreamingResponse)
-def get_report(job_id: str, _: str = Depends(get_current_user)):
-    job = store.get(job_id)
+def get_report(job_id: str, token: str = Depends(_oauth2),
+               session: Session = Depends(get_session)):
+    job = jobs.load_authorized(session, job_id=job_id,
+                               token_payload=decode_token(token))
     if not job:
         raise HTTPException(status_code=404, detail="Job bulunamadı")
     if job["status"] != "done":
