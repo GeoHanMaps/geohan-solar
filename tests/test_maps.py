@@ -39,6 +39,8 @@ def _make_tiff_bytes(score=70.0) -> bytes:
 
 
 TIFF_BYTES = _make_tiff_bytes()
+EMPTY_CONSTRAINTS = '{"type":"FeatureCollection","features":[]}'
+GENERATE_RETURN = (TIFF_BYTES, EMPTY_CONSTRAINTS)
 
 MAP_PAYLOAD = {
     "geom": {
@@ -58,7 +60,7 @@ MAP_PAYLOAD = {
 def client(tmp_path_factory):
     maps_dir = str(tmp_path_factory.mktemp("maps"))
     with (
-        patch("app.services.heatmap.generate", return_value=TIFF_BYTES),
+        patch("app.services.heatmap.generate", return_value=GENERATE_RETURN),
         patch("app.config.settings.maps_data_dir", maps_dir, create=True),
     ):
         from app.main import app
@@ -78,7 +80,7 @@ def auth_headers():
 @pytest.fixture
 def done_map_id(client, auth_headers, tmp_path_factory):
     """Tamamlanmış bir harita job'ı oluştur."""
-    with patch("app.services.heatmap.generate", return_value=TIFF_BYTES):
+    with patch("app.services.heatmap.generate", return_value=GENERATE_RETURN):
         r = client.post("/api/v1/maps", json=MAP_PAYLOAD, headers=auth_headers)
     assert r.status_code == 202
     return r.json()["id"]
@@ -88,12 +90,12 @@ def done_map_id(client, auth_headers, tmp_path_factory):
 
 class TestCreateMap:
     def test_returns_202(self, client, auth_headers):
-        with patch("app.services.heatmap.generate", return_value=TIFF_BYTES):
+        with patch("app.services.heatmap.generate", return_value=GENERATE_RETURN):
             r = client.post("/api/v1/maps", json=MAP_PAYLOAD, headers=auth_headers)
         assert r.status_code == 202
 
     def test_returns_job_id(self, client, auth_headers):
-        with patch("app.services.heatmap.generate", return_value=TIFF_BYTES):
+        with patch("app.services.heatmap.generate", return_value=GENERATE_RETURN):
             r = client.post("/api/v1/maps", json=MAP_PAYLOAD, headers=auth_headers)
         assert "id" in r.json()
 
