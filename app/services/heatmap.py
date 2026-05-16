@@ -225,7 +225,6 @@ def generate(
     geom = shape(polygon_geojson)
     minx, miny, maxx, maxy = geom.bounds
     lat_c = (miny + maxy) / 2
-    lon_c = (minx + maxx) / 2
 
     # GEE piksel limitine göre çözünürlüğü otomatik ayarla
     resolution_m = _auto_resolution(minx, miny, maxx, maxy, resolution_m)
