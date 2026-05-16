@@ -8,9 +8,10 @@ Global GES yatırım skoru SaaS platformu. Detaylı geçmiş → bellek dosyalar
 - Şifre: Bitwarden/1Password
 
 ## Stack
-- FastAPI + Celery + Redis (Docker Compose)
+- FastAPI + Celery + Redis + PostgreSQL (Docker Compose)
 - Nginx port 80+443, SSL Let's Encrypt — https://geohanmaps.com
-- PostgreSQL/PostGIS yok; cache Redis + JSON dosya tabanlı
+- PostgreSQL 16: user ownership, credit ledger, job_records (alembic migration)
+- Celery beat (--beat flag): retention purge 03:17, spatial cache sweep
 
 ## Komutlar
 ```bash
@@ -75,4 +76,5 @@ config/
 - Solar pipeline: GSA yok. CAMS→PVGIS→Open-Meteo→NASA POWER
 - Overpass rate limit: ülkeler arası 90s bekle
 - `richdem` Python 3.11 uyumsuz — requirements.txt'te yok
-- Tests: 373 passed, 1 xfailed (kanonik — straubing_de pre-kalibrasyon xfail kasıtlı)
+- Tests: 439 passed, 1 skipped (test_pg_concurrency CI-only), 1 xfailed (straubing_de kasıtlı)
+- Migration: `docker exec geohan-solar-api-1 alembic upgrade head` (0001→0002→0003 sıralı)
