@@ -60,7 +60,7 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
             cd /home/geohan/geohan/geohan-solar
@@ -71,9 +71,8 @@ jobs:
             IMAGE="ghcr.io/geohanmaps/geohan-api:${{ needs.build-push.outputs.image_tag }}"
 
             # Önceki image SHA'sını kaydet (rollback için)
-            PREV_IMAGE=$(docker inspect \
-              $(docker compose -f docker-compose.prod.yml ps -q api 2>/dev/null) \
-              --format '{{.Image}}' 2>/dev/null || echo "")
+            API_CID=$(docker compose -f docker-compose.prod.yml ps -q api 2>/dev/null || true)
+            PREV_IMAGE=$([ -n "$API_CID" ] && docker inspect "$API_CID" --format '{{.Image}}' 2>/dev/null || echo "")
 
             echo "Deploying: $IMAGE"
             echo "Previous:  $PREV_IMAGE"
@@ -89,8 +88,14 @@ jobs:
             docker pull "$IMAGE"
             docker compose -f docker-compose.prod.yml up -d api worker
 
-            # DB migration — yeni container ayağa kalktıktan sonra
-            sleep 5
+            # DB migration — container running olana kadar bekle (max 30s)
+            for i in $(seq 1 6); do
+              sleep 5
+              STATE=$(docker compose -f docker-compose.prod.yml ps api --format json 2>/dev/null \
+                | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['State'] if isinstance(d,list) else d['State'])" 2>/dev/null || echo "unknown")
+              [ "$STATE" = "running" ] && break
+              echo "  API container bekleniyor... ($i/6) — $STATE"
+            done
             docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
 
             # Health check — 60 saniye boyunca dene
