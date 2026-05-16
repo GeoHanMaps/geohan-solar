@@ -1,0 +1,56 @@
+{
+  "_about": "Yer-gerçeği MW/ha benchmark seti. Gerçek çalışan utility-scale GES'ler: kamuya açık kapasite (MW) ve saha alanı (ha) → gerçek MW/ha. Model (app.services.capacity.calculate) bilinen plant parametreleriyle (panel_tech, tracking, temsili eğim) çalıştırılır; tahmin vs gerçek karşılaştırılır. Saf fizik — ağ yok, deterministik.",
+  "_rules": {
+    "verified=true": "Kapasite + alan + parametreler güvenilir kaynaktan teyitli. Regresyon testi YALNIZCA bunları zorlar.",
+    "verified=false": "Sayılar mevcut ama kaynak/alan-tanımı teyit edilmeli (kompleks-seviyesi alan, AC/DC farkı vb). Script raporlar ama test zorlamaz. Teyit edilince verified=true yapılır.",
+    "area_basis": "Alanın neyi kapsadığı — 'site footprint' (yollar/trafo dahil çit içi) modelin SITE_UTIL=0.70 varsayımıyla uyumludur."
+  },
+  "tolerance_pct": 10.0,
+  "plants": [
+    {
+      "name": "Karapınar GES",
+      "country": "TR",
+      "lat": 37.74,
+      "lon": 33.55,
+      "capacity_mw": 1350,
+      "area_ha": 2200,
+      "panel_tech": "mono",
+      "tracking": "fixed",
+      "slope_pct": 1.0,
+      "verified": true,
+      "area_basis": "site footprint",
+      "source": "Kalyon Karapınar 1.35 GWp / ~2200 ha — bellek doğrulaması: gerçek 0.614, model 0.616 MW/ha",
+      "note": "ANCHOR — SITE_UTIL=0.70 bu sahaya kalibre edildi."
+    },
+    {
+      "name": "Benban Solar Park",
+      "country": "EG",
+      "lat": 24.46,
+      "lon": 32.74,
+      "capacity_mw": 1650,
+      "area_ha": 3700,
+      "panel_tech": "mono",
+      "tracking": "fixed",
+      "slope_pct": 1.0,
+      "verified": false,
+      "area_basis": "complex footprint (41 alt-saha)",
+      "source": "Kamuya açık: ~1.65 GW, ~37 km². Alan kompleks-seviyesi — alt-saha toplamı teyit edilmeli.",
+      "note": "Teyit bekliyor — kompleks alanı boş koridorları içerir, gerçek MW/ha düşük çıkabilir."
+    },
+    {
+      "name": "Bhadla Solar Park",
+      "country": "IN",
+      "lat": 27.54,
+      "lon": 71.91,
+      "capacity_mw": 2245,
+      "area_ha": 5700,
+      "panel_tech": "mono",
+      "tracking": "single_axis",
+      "slope_pct": 1.0,
+      "verified": false,
+      "area_basis": "park boundary (~57 km²)",
+      "source": "Kamuya açık: ~2.25 GW, ~57 km² park sınırı. Tracking ve alan tanımı teyit edilmeli.",
+      "note": "Teyit bekliyor — park sınırı saf footprint'ten geniş."
+    }
+  ]
+}
