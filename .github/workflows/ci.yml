@@ -29,18 +29,38 @@ jobs:
   test:
     name: Tests (Docker)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: geohan
+          POSTGRES_PASSWORD: geohan
+          POSTGRES_DB: geohan_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U geohan"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
       - name: Build test image
         run: docker build -t geohan-test:ci .
 
+      # --network host lets the sibling test container reach the Postgres
+      # service on the runner's localhost:5432. DATABASE_URL gates the
+      # Postgres-only FOR UPDATE proof (test_pg_concurrency); the rest of
+      # the suite still runs on in-memory SQLite.
       - name: Run pytest
         run: |
           docker run --rm \
+            --network host \
             -e SECRET_KEY=ci-test-secret-placeholder-000000000000 \
             -e GEE_PROJECT=geohan-ci \
             -e DEBUG=true \
+            -e DATABASE_URL=postgresql+psycopg2://geohan:geohan@localhost:5432/geohan_test \
             geohan-test:ci \
             python -m pytest tests/ --tb=short -q
 

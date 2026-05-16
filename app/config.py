@@ -61,11 +61,20 @@ class Settings(BaseSettings):
     # veya JSON array (["*"]) olarak .env'de verilebilir
     cors_origins: list[str] = ["*"]
 
-    @field_validator("cors_origins", mode="before")
+    # TrustedHostMiddleware allowed_hosts — CORS'tan AYRI tutulur. Boş
+    # bırakılırsa cors_origins'ten türetilir (geriye dönük uyum); her
+    # durumda healthcheck/SSL-terminator iç host'ları daima eklenir
+    # (bkz. main.py _ALWAYS_TRUSTED_HOSTS) → healthcheck-400 footgun'ı
+    # yapısal olarak ortadan kalkar, CORS'a localhost sokmaya gerek yok.
+    trusted_hosts: list[str] = []
+
+    @field_validator("cors_origins", "trusted_hosts", mode="before")
     @classmethod
-    def _parse_cors(cls, v):
+    def _parse_csv_or_json(cls, v):
         if isinstance(v, str):
             v = v.strip()
+            if not v:
+                return []
             if v.startswith("["):
                 return json.loads(v)
             return [o.strip() for o in v.split(",") if o.strip()]
@@ -77,6 +86,10 @@ class Settings(BaseSettings):
 
     # Heatmap COG depolama dizini
     maps_data_dir: str = "data/maps"
+    # Heatmap raster/constraint dosyaları bu kadar gün sonra silinir.
+    # Dayanıklı metadata (stats, params) job_records'ta kalır; ağır raster
+    # yeniden üretilebilir → bounded disk + yetim dosya temizliği.
+    maps_retention_days: int = 14
 
     # Production modunda OpenAPI docs kapalı
     debug: bool = False
