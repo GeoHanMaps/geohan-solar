@@ -57,8 +57,19 @@ jobs:
       - name: Add server to known_hosts
         run: ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Test SSH connection
-        run: ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} echo "SSH_OK"
+      - name: Debug — agent keys + SSH verbose
+        run: |
+          echo "=== Agent keys ===" > /tmp/ssh_debug.txt
+          ssh-add -l >> /tmp/ssh_debug.txt 2>&1
+          echo "=== SSH verbose ===" >> /tmp/ssh_debug.txt
+          ssh -vvv -o BatchMode=yes ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} echo "SSH_OK" >> /tmp/ssh_debug.txt 2>&1 || true
+
+      - name: Upload SSH debug artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ssh-debug
+          path: /tmp/ssh_debug.txt
 
       - name: Deploy
         env:
