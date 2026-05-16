@@ -10,9 +10,9 @@ def analyse(lat: float, lon: float, radius_m: int = 3000) -> dict:
     roi = ee.Geometry.Rectangle([lon - delta_lon, lat - delta_lat,
                                   lon + delta_lon, lat + delta_lat])
 
-    srtm       = ee.Image("USGS/SRTMGL1_003")
-    slope_img  = ee.Terrain.slope(srtm)
-    aspect_img = ee.Terrain.aspect(srtm)
+    copdem     = ee.ImageCollection("COPERNICUS/DEM/GLO30").mosaic()
+    slope_img  = ee.Terrain.slope(copdem)
+    aspect_img = ee.Terrain.aspect(copdem)
     lc_img     = ee.ImageCollection("ESA/WorldCover/v200").first()
 
     slope_stats = slope_img.reduceRegion(
@@ -86,11 +86,11 @@ def horizon_profile(lat: float, lon: float) -> dict[int, float]:
         lon + delta_lon, lat + delta_lat,
     ])
 
-    srtm = ee.Image("USGS/SRTMGL1_003")
+    copdem = ee.ImageCollection("COPERNICUS/DEM/GLO30").mosaic()
     elev_data = (
-        srtm
+        copdem
         .sampleRectangle(region=roi, defaultValue=0)
-        .get("elevation")
+        .get("DEM")
         .getInfo()
     )
 

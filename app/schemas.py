@@ -53,12 +53,13 @@ class ScoreBreakdown(BaseModel):
 
 
 class CapacityResult(BaseModel):
-    mw_per_ha:    float
-    total_mw:     float
-    annual_gwh:   float
-    panel_tech:   str
-    tracking:     str
-    gcr_effective: float
+    mw_per_ha:          float
+    total_mw:           float
+    annual_gwh:         float
+    panel_tech:         str
+    tracking:           str
+    gcr_effective:      float
+    buildable_fraction: float = 1.0
 
 
 class GridConnectionCost(BaseModel):

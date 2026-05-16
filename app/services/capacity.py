@@ -25,6 +25,7 @@ def calculate(
     panel_tech: PanelTech,
     tracking: TrackingType,
     gcr_override: float | None = None,
+    buildable_fraction: float = 1.0,
 ) -> dict:
     p = PANEL_CFG[panel_tech]
     t = TRACKING_CFG[tracking]
@@ -39,15 +40,17 @@ def calculate(
     if tracking == TrackingType.dual_axis and slope_pct > t["max_slope_pct"]:
         yield_factor *= 0.5
 
+    bf = max(0.0, min(1.0, buildable_fraction))
     mw_per_ha  = round(effective_gcr * p["efficiency"] * 10 * yield_factor, 3)
-    total_mw   = mw_per_ha * area_ha
+    total_mw   = mw_per_ha * area_ha * bf
     annual_gwh = ghi_annual * total_mw * 1000 * settings.performance_ratio / 1_000_000
 
     return {
-        "mw_per_ha":     mw_per_ha,
-        "total_mw":      total_mw,
-        "annual_gwh":    round(annual_gwh, 2),
-        "panel_label":   p["label"],
-        "tracking_label": t["label"],
-        "gcr_effective": round(effective_gcr, 3),
+        "mw_per_ha":          mw_per_ha,
+        "total_mw":           total_mw,
+        "annual_gwh":         round(annual_gwh, 2),
+        "panel_label":        p["label"],
+        "tracking_label":     t["label"],
+        "gcr_effective":      round(effective_gcr, 3),
+        "buildable_fraction": round(bf, 3),
     }

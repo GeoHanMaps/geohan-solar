@@ -90,6 +90,7 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
                 mw_per_ha=cap["mw_per_ha"],     total_mw=cap["total_mw"],
                 annual_gwh=cap["annual_gwh"],   panel_tech=cap["panel_label"],
                 tracking=cap["tracking_label"], gcr_effective=cap["gcr_effective"],
+                buildable_fraction=cap["buildable_fraction"],
             ),
             financial=FinancialResult(**fin),
         )

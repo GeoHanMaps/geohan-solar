@@ -308,7 +308,7 @@ async function startCentroidAnalysis(params) {
   if (!c) return;
   const body = {
     lat: c.lat, lon: c.lon,
-    area_ha: 100, // indikatif — gerçek alan polygon'dan
+    area_ha: polygonAreaHa(currentPolygon),
     panel_tech: params.panel_tech,
     tracking: params.tracking,
     country_code: params.country_code,
@@ -320,6 +320,24 @@ async function startCentroidAnalysis(params) {
     currentAnalysisId = job.id;
     analysisPoll = setInterval(pollAnalysisJob, 3000);
   } catch { /* optional */ }
+}
+
+function polygonAreaHa(geom) {
+  if (!geom || !geom.coordinates) return 100;
+  const ring = geom.coordinates[0];
+  if (!ring || ring.length < 4) return 100;
+  const n = ring.length - 1;
+  // Ortalama enlem ile cos(lat) düzeltmesi — shoelace km²
+  const latRad = ring.slice(0, n).reduce((s, p) => s + p[1], 0) / n * Math.PI / 180;
+  const kx = Math.cos(latRad) * 111.32;  // derece lon → km
+  const ky = 110.54;                      // derece lat → km
+  let area = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += (ring[i][0] * kx) * (ring[j][1] * ky) - (ring[j][0] * kx) * (ring[i][1] * ky);
+  }
+  const km2 = Math.abs(area) / 2;
+  return Math.min(Math.max(km2 * 100, 1), 50000);  // ha, clamp [1, 50000]
 }
 
 function polygonCentroid(geom) {

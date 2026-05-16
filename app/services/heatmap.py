@@ -124,12 +124,12 @@ def _terrain_raster(
     roi  = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
     proj = ee.Projection(f"EPSG:{utm_epsg}").atScale(resolution_m)
 
-    srtm = ee.Image("USGS/SRTMGL1_003")
-    lc   = ee.ImageCollection("ESA/WorldCover/v200").first()
+    copdem = ee.ImageCollection("COPERNICUS/DEM/GLO30").mosaic()
+    lc     = ee.ImageCollection("ESA/WorldCover/v200").first()
 
     combined = (
-        ee.Terrain.slope(srtm).rename("slope")
-        .addBands(ee.Terrain.aspect(srtm).rename("aspect"))
+        ee.Terrain.slope(copdem).rename("slope")
+        .addBands(ee.Terrain.aspect(copdem).rename("aspect"))
         .addBands(lc.rename("lc"))
         .reproject(proj)
     )
@@ -149,11 +149,12 @@ def _terrain_raster(
     return slope, aspect, lc_arr.astype(int)
 
 
-def _idw_ghi(
+def _idw_pts(
     rows: int, cols: int,
     minx: float, miny: float, maxx: float, maxy: float,
+    sampler, fallback: float,
 ) -> np.ndarray:
-    """5 nokta IDW → GHI grid (row 0 = kuzey)."""
+    """5-nokta IDW (4 köşe + merkez) — herhangi bir sampler fonksiyon için."""
     pts = [
         (miny, minx), (miny, maxx),
         (maxy, minx), (maxy, maxx),
@@ -162,9 +163,9 @@ def _idw_ghi(
     vals = []
     for slat, slon in pts:
         try:
-            vals.append(solar.get_annual_ghi(slat, slon))
+            vals.append(sampler(slat, slon))
         except Exception:
-            vals.append(1600.0)
+            vals.append(fallback)
 
     lats = np.linspace(maxy, miny, rows)
     lons = np.linspace(minx, maxx, cols)
@@ -178,6 +179,15 @@ def _idw_ghi(
         num += w * v
         den += w
     return num / den
+
+
+def _idw_ghi(
+    rows: int, cols: int,
+    minx: float, miny: float, maxx: float, maxy: float,
+) -> np.ndarray:
+    """5 nokta IDW → GHI grid (row 0 = kuzey)."""
+    return _idw_pts(rows, cols, minx, miny, maxx, maxy,
+                    sampler=solar.get_annual_ghi, fallback=1600.0)
 
 
 # ─── Vectorized skor fonksiyonları ────────────────────────────────────────────
@@ -235,18 +245,15 @@ def generate(
     # 4. GHI raster (IDW)
     ghi = _idw_ghi(rows, cols, minx, miny, maxx, maxy)
 
-    # 5. Mesafe skoru — alan merkezi için tek değer
-    try:
-        grid_km = grid_svc.nearest_substation_km(lat_c, lon_c)
-    except Exception:
-        grid_km = 5.0
-    try:
-        road_km = access_svc.nearest_road_km(lat_c, lon_c)
-    except Exception:
-        road_km = 1.0
-
-    grid_sc = _s_dist(np.full((rows, cols), grid_km), 1.0, 30.0)
-    road_sc = _s_dist(np.full((rows, cols), road_km), 0.5, 10.0)
+    # 5. Mesafe skoru — 5-nokta IDW (country_code grid sorguya aktarılır)
+    grid_arr = _idw_pts(rows, cols, minx, miny, maxx, maxy,
+                        sampler=lambda la, lo: grid_svc.nearest_substation_km(la, lo, country_code),
+                        fallback=5.0)
+    road_arr = _idw_pts(rows, cols, minx, miny, maxx, maxy,
+                        sampler=access_svc.nearest_road_km,
+                        fallback=1.0)
+    grid_sc = _s_dist(grid_arr, 1.0, 30.0)
+    road_sc = _s_dist(road_arr, 0.5, 10.0)
 
     # 6. Arazi örtüsü ve yasal skoru (ülke kuralları dahil)
     rules = _country_rules(country_code)

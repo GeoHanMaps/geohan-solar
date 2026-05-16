@@ -9,7 +9,9 @@ from app.config import settings
 from app.services import cache
 
 _COSTS_PATH = Path(__file__).parent.parent.parent / "config" / "country_costs.json"
+_RULES_PATH = Path(__file__).parent.parent.parent / "config" / "country_rules.json"
 _COUNTRY_COSTS: dict = {}
+_COUNTRY_RULES: dict = {}
 
 
 def _load_costs() -> dict:
@@ -17,6 +19,37 @@ def _load_costs() -> dict:
     if not _COUNTRY_COSTS:
         _COUNTRY_COSTS = json.loads(_COSTS_PATH.read_text(encoding="utf-8"))
     return _COUNTRY_COSTS
+
+
+def _load_rules() -> dict:
+    global _COUNTRY_RULES
+    if not _COUNTRY_RULES:
+        _COUNTRY_RULES = json.loads(_RULES_PATH.read_text(encoding="utf-8"))
+    return _COUNTRY_RULES
+
+
+def _min_grid_kv(country_code: str) -> float:
+    rules = _load_rules()
+    cc = (country_code or "DEFAULT").upper()
+    cfg = rules.get(cc) or rules.get("DEFAULT", {})
+    return float(cfg.get("min_grid_kv", 0))
+
+
+def _parse_voltage_kv(raw) -> float | None:
+    """OSM voltage tag → maks kV. None döner → eksik/geçersiz."""
+    if raw is None:
+        return None
+    if isinstance(raw, float) and math.isnan(raw):
+        return None
+    vals = []
+    for part in str(raw).replace(",", ";").split(";"):
+        try:
+            vals.append(float(part.strip()))
+        except ValueError:
+            pass
+    if not vals:
+        return None
+    return max(vals) / 1000.0  # OSM volt → kV
 
 
 def _reliability_to_km(reliability: float) -> float:
@@ -63,11 +96,17 @@ def nearest_substation_km(
     try:
         gdf = ox.features_from_point(
             (lat, lon),
-            tags={"power": ["substation", "tower"]},
+            tags={"power": ["substation"]},
             dist=search_radius_m,
         )
         min_d = float("inf")
+        min_kv = _min_grid_kv(country_code)
+        has_voltage = "voltage" in gdf.columns
         for _, row in gdf.iterrows():
+            if min_kv > 0 and has_voltage:
+                kv = _parse_voltage_kv(row["voltage"])
+                if kv is not None and kv < min_kv:
+                    continue
             g = row.geometry
             c = g if g.geom_type == "Point" else g.centroid
             ex, ey = tr.transform(c.x, c.y)
