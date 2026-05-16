@@ -65,29 +65,25 @@ def fake_redis_store():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def ensure_postgres_schema():
-    """CI only: DATABASE_URL=postgresql → create all tables before any test
-    module setup runs. Without this, the module-scoped valid_token fixture
-    in test_auth.py reaches session_or_none before db_override is active,
-    queries a Postgres with no tables, and raises ProgrammingError → 500.
-    Connection failure is silently ignored so non-CI runs are unaffected."""
-    import os
-    from sqlalchemy import create_engine
-    db_url = os.getenv("DATABASE_URL", "")
-    if not db_url.startswith("postgresql"):
-        yield
-        return
-    import app.models.user  # noqa: F401
-    import app.models.credit_transaction  # noqa: F401
-    import app.models.job_record  # noqa: F401
-    from app.db import Base
-    eng = create_engine(db_url, future=True)
-    try:
-        Base.metadata.create_all(eng)
-    except Exception:
-        pass  # Postgres unreachable (non-CI env) — skip silently
+def session_scope_db_override():
+    """Module-scoped fixtures (e.g. valid_token in test_auth.py) run before
+    function-scoped db_override is active. They call endpoints that use
+    session_or_none, which tries to connect to Postgres when DATABASE_URL is
+    set — failing when tables don't exist or Postgres is unreachable.
+
+    Override session_or_none → None at SESSION scope so those requests fall
+    through to the env-based admin path without touching any real DB.
+    db_override (function scope) then re-overrides both deps with SQLite for
+    each individual test, and restores this session-level override on teardown."""
+    from app.main import app
+    from app.routers.auth import session_or_none
+
+    def _yield_none():
+        yield None
+
+    app.dependency_overrides[session_or_none] = _yield_none
     yield
-    eng.dispose()
+    app.dependency_overrides.pop(session_or_none, None)
 
 
 @pytest.fixture(autouse=True, scope="session")
