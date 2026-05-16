@@ -11,7 +11,7 @@ __pycache__
 *.png
 *.tif
 cache/
-data/
+data/maps/
 GeoHan_*
 find_best_location.py
 geohan_analysis.py
