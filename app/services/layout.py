@@ -331,6 +331,12 @@ def _osm_context(
                 "synthetic": synthetic_grid,
             },
         })
+        # Seçilen (hedef) trafo — frontend animasyon için ayrı etiket
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [round(tgt_lon, 6), round(tgt_lat, 6)]},
+            "properties": {"layer": "target_substation", "kv": target_kv, "synthetic": synthetic_grid},
+        })
 
     # ── Erişim yolu ──────────────────────────────────────────────────
     try:

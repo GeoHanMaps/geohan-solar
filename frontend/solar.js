@@ -6,6 +6,8 @@ let currentMapId = null, pollInterval = null;
 let currentAnalysisId = null, analysisPoll = null;
 let currentBasemap = 'satellite';
 let layoutVisible = false;
+let _lytMarkers = [];
+let _lytAnimId  = null;
 // "Tahmini kapasite" = centroid mw_per_ha × heatmap alanı (ha). İki kaynak
 // (heatmap stats + centroid analizi) farklı zamanlarda gelir; ikisi de
 // gelince hesaplanır.
@@ -593,12 +595,71 @@ async function downloadPdf() {
 // ── Layout katmanı ─────────────────────────────────────────────────
 const _LYT_LAYERS = [
   'lyt-buildable', 'lyt-setback', 'lyt-blocks-fill', 'lyt-blocks-line',
-  'lyt-roads', 'lyt-tx', 'lyt-poc', 'lyt-interconnect', 'lyt-access',
+  'lyt-roads', 'lyt-interconnect-bg', 'lyt-access',
   'lyt-osm-lines', 'lyt-osm-subs',
 ];
 const _LYT_SOURCES = ['lyt-src'];
 
+function _clearLayoutAnim() {
+  if (_lytAnimId) { cancelAnimationFrame(_lytAnimId); _lytAnimId = null; }
+  for (const m of _lytMarkers) m.remove();
+  _lytMarkers = [];
+}
+
+function _lytMarker(cls, lngLat, title) {
+  const el = Object.assign(document.createElement('div'), { className: cls });
+  if (title) el.title = title;
+  const m = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(lngLat).addTo(map);
+  _lytMarkers.push(m);
+  return m;
+}
+
+function _startFlowAnim(coords) {
+  if (!coords || coords.length < 2) return;
+  const cum = [0];
+  for (let i = 1; i < coords.length; i++) {
+    const dx = coords[i][0] - coords[i-1][0], dy = coords[i][1] - coords[i-1][1];
+    cum.push(cum[i-1] + Math.sqrt(dx*dx + dy*dy));
+  }
+  const total = cum[cum.length - 1];
+  if (total < 1e-10) return;
+
+  function ptAt(d) {
+    d = ((d % total) + total) % total;
+    for (let i = 1; i < cum.length; i++) {
+      if (d <= cum[i]) {
+        const t = (d - cum[i-1]) / (cum[i] - cum[i-1]);
+        return [coords[i-1][0] + t*(coords[i][0]-coords[i-1][0]),
+                coords[i-1][1] + t*(coords[i][1]-coords[i-1][1])];
+      }
+    }
+    return coords[coords.length - 1];
+  }
+
+  const N = 4, PERIOD = 2.5;
+  const dots = Array.from({ length: N }, () => {
+    const el = Object.assign(document.createElement('div'), { className: 'lyt-marker-flow' });
+    const m = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(coords[0]).addTo(map);
+    _lytMarkers.push(m);
+    return m;
+  });
+
+  let t0 = null;
+  function frame(ts) {
+    if (!t0) t0 = ts;
+    const elapsed = (ts - t0) / 1000;
+    const traveled = (elapsed % PERIOD) / PERIOD * total;
+    for (let i = 0; i < N; i++)
+      dots[i].setLngLat(ptAt(traveled + (i / N) * total));
+    if (map.getLayer('lyt-blocks-fill'))
+      map.setPaintProperty('lyt-blocks-fill', 'fill-opacity', 0.50 + 0.09 * Math.sin(elapsed * 1.8));
+    _lytAnimId = requestAnimationFrame(frame);
+  }
+  _lytAnimId = requestAnimationFrame(frame);
+}
+
 function removeLayoutLayers() {
+  _clearLayoutAnim();
   for (const id of _LYT_LAYERS) if (map.getLayer(id)) map.removeLayer(id);
   for (const id of _LYT_SOURCES) if (map.getSource(id)) map.removeSource(id);
   layoutVisible = false;
@@ -630,9 +691,9 @@ function addLayoutLayers(geojson, summary) {
   removeLayoutLayers();
   map.addSource('lyt-src', { type: 'geojson', data: geojson });
 
-  const layer = (id, type, filter, paint, layout) => {
+  const layer = (id, type, filter, paint, lyt) => {
     const spec = { id, type, source: 'lyt-src', filter, paint };
-    if (layout) spec.layout = layout;
+    if (lyt) spec.layout = lyt;
     map.addLayer(spec);
   };
 
@@ -656,17 +717,10 @@ function addLayoutLayers(geojson, summary) {
     ['==', ['get', 'layer'], 'internal_road'],
     { 'line-color': '#d9c089', 'line-width': 1, 'line-dasharray': [3, 2] });
 
-  layer('lyt-tx', 'circle',
-    ['==', ['get', 'layer'], 'transformer_pad'],
-    { 'circle-radius': 6, 'circle-color': '#f0a13a', 'circle-stroke-width': 1.5, 'circle-stroke-color': '#fff' });
-
-  layer('lyt-poc', 'circle',
-    ['==', ['get', 'layer'], 'plant_substation'],
-    { 'circle-radius': 8, 'circle-color': '#e8c14f', 'circle-stroke-width': 2, 'circle-stroke-color': '#222' });
-
-  layer('lyt-interconnect', 'line',
+  // Bağlantı hattı — statik arka plan (üzerine akan noktalar binecek)
+  layer('lyt-interconnect-bg', 'line',
     ['==', ['get', 'layer'], 'interconnect_route'],
-    { 'line-color': '#e8c14f', 'line-width': 2.5, 'line-dasharray': [2, 1] });
+    { 'line-color': '#e8c14f', 'line-width': 2, 'line-opacity': 0.4 });
 
   layer('lyt-access', 'line',
     ['==', ['get', 'layer'], 'access_route'],
@@ -675,25 +729,44 @@ function addLayoutLayers(geojson, summary) {
   // OSM iletim hatları — voltaja göre renk
   layer('lyt-osm-lines', 'line',
     ['==', ['get', 'layer'], 'osm_line'],
-    {
-      'line-color': [
-        'step', ['coalesce', ['get', 'kv'], 0],
-        '#999', 66, '#e90', 220, '#d33',
-      ],
-      'line-width': 1.5,
-    });
+    { 'line-color': ['step', ['coalesce', ['get', 'kv'], 0], '#666', 66, '#e90', 220, '#d33'], 'line-width': 1.5 });
 
+  // OSM trafo merkezleri — hedef hariç soluk göster
   layer('lyt-osm-subs', 'circle',
-    ['==', ['get', 'layer'], 'osm_substation'],
-    { 'circle-radius': 5, 'circle-color': '#d33', 'circle-stroke-width': 1, 'circle-stroke-color': '#fff' });
+    ['all', ['==', ['get', 'layer'], 'osm_substation']],
+    { 'circle-radius': 4, 'circle-color': '#933', 'circle-opacity': 0.45, 'circle-stroke-width': 1, 'circle-stroke-color': '#fff', 'circle-stroke-opacity': 0.3 });
+
+  // ── HTML Marker animasyonları ────────────────────────────────────
+  // İnverter / trafo pad — turuncu pulse
+  for (const f of geojson.features.filter(f => f.properties.layer === 'transformer_pad'))
+    _lytMarker('lyt-marker-tx', f.geometry.coordinates, 'Inverter / Trafo Pad');
+
+  // Şalt (POC) — sarı pulse
+  for (const f of geojson.features.filter(f => f.properties.layer === 'plant_substation')) {
+    const kv = summary?.target_substation_kv;
+    _lytMarker('lyt-marker-poc', f.geometry.coordinates, `Şalt (POC)${kv ? ' · ' + kv + ' kV' : ''}`);
+  }
+
+  // Hedef trafo merkezi — kırmızı pulse
+  const targetSub = geojson.features.find(f => f.properties.layer === 'target_substation');
+  if (targetSub) {
+    const kv = targetSub.properties.kv;
+    _lytMarker('lyt-marker-sub', targetSub.geometry.coordinates,
+      `Trafo Merkezi${kv ? ' · ' + kv + ' kV' : ''}`);
+  }
+
+  // Akan enerji noktaları + panel shimmer
+  const ic = geojson.features.find(f => f.properties.layer === 'interconnect_route');
+  if (ic) _startFlowAnim(ic.geometry.coordinates);
 
   // Sağ panel güncelle
   if (summary) {
     document.getElementById('layout-section').style.display = 'block';
-    document.getElementById('lyt-dc-mw').textContent  = summary.dc_mw.toFixed(1) + ' MW';
-    document.getElementById('lyt-ac-mw').textContent  = summary.ac_mw.toFixed(1) + ' MW';
-    document.getElementById('lyt-n-tx').textContent   = summary.n_transformers;
-    document.getElementById('lyt-km').textContent     = summary.interconnect_km.toFixed(1) + ' km';
+    const syn = summary.synthetic_grid ? ' (tahmini)' : '';
+    document.getElementById('lyt-dc-mw').textContent = summary.dc_mw.toFixed(1) + ' MW';
+    document.getElementById('lyt-ac-mw').textContent = summary.ac_mw.toFixed(1) + ' MW';
+    document.getElementById('lyt-n-tx').textContent  = summary.n_transformers;
+    document.getElementById('lyt-km').textContent    = summary.interconnect_km.toFixed(1) + ' km' + syn;
   }
 }
 
