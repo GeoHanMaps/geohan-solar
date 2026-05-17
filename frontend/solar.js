@@ -150,6 +150,7 @@ function finishPolygon() {
   drawPreview(true);
   document.getElementById('clear-btn').style.display = 'block';
   document.getElementById('analyse-btn').disabled = false;
+  showPolygonArea(polygonAreaHa(currentPolygon) / 100);
 }
 
 function drawPreview(final = false) {
@@ -242,6 +243,7 @@ function selectBoundary(b) {
   document.getElementById('clear-btn').style.display = 'block';
   document.getElementById('analyse-btn').disabled = false;
   document.getElementById('boundary-list').innerHTML = '';
+  showPolygonArea(b.area_km2);
 }
 
 // ── Analysis ───────────────────────────────────────────────────────
@@ -486,6 +488,14 @@ function updateOpacity(v) {
 }
 
 // ── Right panel render ─────────────────────────────────────────────
+function showPolygonArea(areaKm2) {
+  document.getElementById('right-empty').style.display = 'none';
+  document.getElementById('right-content').style.display = 'block';
+  document.getElementById('kv-area').textContent = areaKm2.toFixed(1) + ' km²';
+  lastAreaKm2 = areaKm2;
+  refreshCapacityEstimate();
+}
+
 function showStats(stats) {
   if (!stats) return;
   document.getElementById('right-empty').style.display = 'none';

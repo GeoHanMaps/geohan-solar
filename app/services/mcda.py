@@ -18,8 +18,8 @@ LC_SCORE = {
 }
 
 _DEFAULT_WEIGHTS = {
-    "egim": 0.15, "ghi": 0.25, "baki": 0.08, "golge": 0.07,
-    "arazi": 0.05, "sebeke": 0.20, "erisim": 0.10, "yasal": 0.10,
+    "egim": 0.08, "ghi": 0.40, "baki": 0.03, "golge": 0.03,
+    "arazi": 0.03, "sebeke": 0.28, "erisim": 0.03, "yasal": 0.12,
 }
 
 _WEIGHTS_FILE = Path(__file__).parent.parent.parent / "config" / "mcda_weights.json"
