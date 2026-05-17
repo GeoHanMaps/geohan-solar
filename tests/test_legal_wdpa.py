@@ -5,12 +5,11 @@ OSM / Protected Planet ağ çağrısı yok — osmnx mock'lanır.
 Referans nokta: lat=37.0, lon=32.0 (Türkiye, Tuz Gölü civarı)
 """
 
-import math
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import geopandas as gpd
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon
 
 from app.services import legal, cache
 
