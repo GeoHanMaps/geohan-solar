@@ -153,6 +153,7 @@ function finishPolygon() {
   document.getElementById('clear-btn').style.display = 'block';
   document.getElementById('analyse-btn').disabled = false;
   showPolygonArea(polygonAreaHa(currentPolygon) / 100);
+  setLayoutBtn('locked');
 }
 
 function drawPreview(final = false) {
@@ -198,7 +199,7 @@ function clearPolygon() {
   document.getElementById('vertex-count').style.display = 'none';
   document.getElementById('analyse-btn').disabled = true;
   document.getElementById('legend').style.display = 'none';
-  document.getElementById('layout-btn').style.display = 'none';
+  setLayoutBtn('hidden');
   resetRightPanel();
   setStatus('');
 }
@@ -246,6 +247,7 @@ function selectBoundary(b) {
   document.getElementById('analyse-btn').disabled = false;
   document.getElementById('boundary-list').innerHTML = '';
   showPolygonArea(b.area_km2);
+  setLayoutBtn('locked');
 }
 
 // ── Analysis ───────────────────────────────────────────────────────
@@ -373,7 +375,7 @@ async function pollMapJob() {
       loadHeatmap(currentMapId);
       document.getElementById('analyse-btn').disabled = false;
       document.getElementById('legend').style.display = 'block';
-      document.getElementById('layout-btn').style.display = 'block';
+      setLayoutBtn('ready');
     }
     if (job.status === 'failed') {
       clearInterval(pollInterval); pollInterval = null;
@@ -663,9 +665,28 @@ function removeLayoutLayers() {
   for (const id of _LYT_LAYERS) if (map.getLayer(id)) map.removeLayer(id);
   for (const id of _LYT_SOURCES) if (map.getSource(id)) map.removeSource(id);
   layoutVisible = false;
-  document.getElementById('layout-btn').classList.remove('active');
+  const _b = document.getElementById('layout-btn');
+  _b.classList.remove('active');
+  if (!_b.disabled) _b.textContent = '⚡ Santral Simülasyonu';
   document.getElementById('layout-legend').style.display = 'none';
   document.getElementById('layout-section').style.display = 'none';
+}
+
+// Buton durumu: 'hidden' (poligon yok) | 'locked' (poligon var, ısı haritası yok)
+// | 'ready' (premium ısı haritası tamam → simülasyon çalışır)
+function setLayoutBtn(state) {
+  const btn = document.getElementById('layout-btn');
+  if (state === 'hidden') { btn.style.display = 'none'; return; }
+  btn.style.display = 'block';
+  if (state === 'ready') {
+    btn.disabled = false;
+    btn.title = 'Santral mühendislik simülasyonunu göster';
+    if (!layoutVisible) btn.textContent = '⚡ Santral Simülasyonu';
+  } else { // locked
+    btn.disabled = true;
+    btn.title = 'Premium ısı haritası tamamlanınca açılır — simülasyon ona dayanır';
+    btn.textContent = '⚡ Santral Simülasyonu (kilitli)';
+  }
 }
 
 async function toggleLayout() {
@@ -676,14 +697,27 @@ async function toggleLayout() {
   btn.textContent = '⚡ Yükleniyor…';
   try {
     const r = await apiFetch(`/api/v1/maps/${currentMapId}/layout`);
-    if (!r.ok) { btn.textContent = '⚡ Santral Simülasyonu'; btn.disabled = false; return; }
+    if (!r.ok) {
+      let m;
+      if (r.status === 425)                          m = '✕ Önce premium ısı haritasını tamamlayın — santral simülasyonu ona dayanır.';
+      else if (r.status === 404)                     m = '✕ Harita bulunamadı — ısı haritasını yeniden üretin.';
+      else if (r.status === 401 || r.status === 403) m = '✕ Oturum gerekli — yeniden giriş yapın.';
+      else                                           m = `✕ Simülasyon hatası (${r.status}).`;
+      setStatus('failed', m);
+      btn.textContent = '⚡ Santral Simülasyonu';
+      btn.disabled = false;
+      return;
+    }
     const data = await r.json();
     addLayoutLayers(data.geojson, data.summary);
     layoutVisible = true;
     btn.classList.add('active');
     btn.textContent = '⚡ Simülasyonu Gizle';
     document.getElementById('layout-legend').style.display = 'block';
-  } catch { /* silently fail */ }
+  } catch {
+    setStatus('failed', '✕ Simülasyon yüklenemedi — ağ/sunucu hatası.');
+    btn.textContent = '⚡ Santral Simülasyonu';
+  }
   btn.disabled = false;
 }
 
@@ -720,7 +754,7 @@ function addLayoutLayers(geojson, summary) {
   // Bağlantı hattı — statik arka plan (üzerine akan noktalar binecek)
   layer('lyt-interconnect-bg', 'line',
     ['==', ['get', 'layer'], 'interconnect_route'],
-    { 'line-color': '#e8c14f', 'line-width': 2, 'line-opacity': 0.4 });
+    { 'line-color': '#e8c14f', 'line-width': 3, 'line-opacity': 0.9 });
 
   layer('lyt-access', 'line',
     ['==', ['get', 'layer'], 'access_route'],
