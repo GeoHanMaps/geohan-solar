@@ -188,10 +188,22 @@ def get_layout(map_id: str, token: str = Depends(_oauth2),
         country_code=country_code,
         panel_tech=panel_tech,
         tracking=tracking,
+        panel_model=params.get("panel_model"),
+        inverter_model=params.get("inverter_model"),
+        cable_spec=params.get("cable_spec"),
     )
+    elec = result["summary"].get("electrical")
+    svg = None
+    if elec:
+        from app.services import electrical as elec_svc
+        from app.services import single_line
+        svg = single_line.build_svg(
+            elec, elec_svc.default_mv_kv(),
+            result["summary"].get("target_substation_kv"))
     return LayoutResponse(
         summary=LayoutSummary(**result["summary"]),
         geojson=result["geojson"],
+        single_line_svg=svg,
     )
 
 

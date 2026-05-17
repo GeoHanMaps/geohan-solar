@@ -1,0 +1,150 @@
+{
+  "_meta": {
+    "description": "EPC-seviyesi elektriksel ekipman kutuphanesi. Degerler gercek utility-scale GES datasheet'leri (2024-2025: Rayzon NB-JD580 TOPCon, CSI TOPHiKu6, Sungrow SG250HX/central) + IEC 60228 Class-2 iletken direnc tablosu arastirilarak turetildi. EPC/muhendis verisi geldiginde buraya eklenir; kod degismez.",
+    "version": 1,
+    "updated": "2026-05-17"
+  },
+
+  "panels": {
+    "default": "topcon_580_bifacial",
+    "library": {
+      "topcon_580_bifacial": {
+        "label": "N-Type TOPCon Bifacial 580W (utility, ~2025)",
+        "tech": "bifacial",
+        "pmax_w": 580.0, "vmp_v": 43.19, "imp_a": 13.43,
+        "voc_v": 52.55, "isc_a": 14.03, "eff_pct": 22.45,
+        "beta_voc_pct_per_c": -0.25,
+        "gamma_pmax_pct_per_c": -0.30,
+        "alpha_isc_pct_per_c": 0.045,
+        "noct_c": 45.0, "bifaciality": 0.75,
+        "max_series_fuse_a": 25.0
+      },
+      "topcon_615_bifacial": {
+        "label": "N-Type TOPCon Bifacial 615W large-format (utility, ~2025)",
+        "tech": "bifacial",
+        "pmax_w": 615.0, "vmp_v": 34.20, "imp_a": 17.98,
+        "voc_v": 40.85, "isc_a": 18.85, "eff_pct": 23.0,
+        "beta_voc_pct_per_c": -0.24,
+        "gamma_pmax_pct_per_c": -0.29,
+        "alpha_isc_pct_per_c": 0.045,
+        "noct_c": 45.0, "bifaciality": 0.80,
+        "max_series_fuse_a": 30.0
+      },
+      "monoperc_550": {
+        "label": "Mono-PERC 550W (legacy/utility)",
+        "tech": "mono",
+        "pmax_w": 550.0, "vmp_v": 41.96, "imp_a": 13.11,
+        "voc_v": 49.95, "isc_a": 13.94, "eff_pct": 21.3,
+        "beta_voc_pct_per_c": -0.275,
+        "gamma_pmax_pct_per_c": -0.35,
+        "alpha_isc_pct_per_c": 0.05,
+        "noct_c": 45.0, "bifaciality": 0.0,
+        "max_series_fuse_a": 25.0
+      }
+    }
+  },
+
+  "inverters": {
+    "default": "string_250kw_1500v",
+    "library": {
+      "string_250kw_1500v": {
+        "label": "Utility string inverter ~250 kVA / 1500 V (SG250HX sinifi)",
+        "type": "string",
+        "ac_kva": 250.0, "p_dc_max_kw": 375.0,
+        "mppt_v_min": 500.0, "mppt_v_max": 1500.0,
+        "v_dc_max": 1500.0, "v_ac_v": 800.0,
+        "eta_max_pct": 99.0, "eta_euro_pct": 98.7,
+        "max_dc_ac": 1.5, "mppt_count": 12
+      },
+      "central_3450kva_1500v": {
+        "label": "Utility central inverter ~3450 kVA / 1500 V",
+        "type": "central",
+        "ac_kva": 3450.0, "p_dc_max_kw": 4800.0,
+        "mppt_v_min": 875.0, "mppt_v_max": 1300.0,
+        "v_dc_max": 1500.0, "v_ac_v": 660.0,
+        "eta_max_pct": 99.0, "eta_euro_pct": 98.8,
+        "max_dc_ac": 1.5, "mppt_count": 1
+      }
+    }
+  },
+
+  "cables": {
+    "_note": "r20 = iletken DC direnci Ohm/km @20C (IEC 60228 Class-2). amp = tipik kurulu akim kapasitesi A (IEC 60364/60502 referans; Faz 4.2'de sicaklik/gomme deratingi uygulanir).",
+    "copper": {
+      "4":   {"r20": 4.61,   "amp": 45},
+      "6":   {"r20": 3.08,   "amp": 57},
+      "10":  {"r20": 1.83,   "amp": 78},
+      "16":  {"r20": 1.15,   "amp": 105},
+      "25":  {"r20": 0.727,  "amp": 137},
+      "35":  {"r20": 0.524,  "amp": 168},
+      "50":  {"r20": 0.387,  "amp": 200},
+      "70":  {"r20": 0.268,  "amp": 253},
+      "95":  {"r20": 0.193,  "amp": 305},
+      "120": {"r20": 0.153,  "amp": 353},
+      "150": {"r20": 0.124,  "amp": 400},
+      "185": {"r20": 0.0991, "amp": 456},
+      "240": {"r20": 0.0754, "amp": 538},
+      "300": {"r20": 0.0601, "amp": 621},
+      "400": {"r20": 0.0470, "amp": 715},
+      "500": {"r20": 0.0366, "amp": 815},
+      "630": {"r20": 0.0283, "amp": 930}
+    },
+    "aluminium": {
+      "16":  {"r20": 1.91,   "amp": 82},
+      "25":  {"r20": 1.20,   "amp": 107},
+      "35":  {"r20": 0.868,  "amp": 131},
+      "50":  {"r20": 0.641,  "amp": 156},
+      "70":  {"r20": 0.443,  "amp": 197},
+      "95":  {"r20": 0.320,  "amp": 238},
+      "120": {"r20": 0.253,  "amp": 276},
+      "150": {"r20": 0.206,  "amp": 312},
+      "185": {"r20": 0.164,  "amp": 356},
+      "240": {"r20": 0.125,  "amp": 420},
+      "300": {"r20": 0.100,  "amp": 485},
+      "400": {"r20": 0.0778, "amp": 558},
+      "500": {"r20": 0.0605, "amp": 636},
+      "630": {"r20": 0.0469, "amp": 726}
+    },
+    "segments": {
+      "dc_string":  {"material": "copper",    "v_drop_max_pct": 1.5},
+      "ac_lv":      {"material": "copper",    "v_drop_max_pct": 1.0},
+      "mv_collect": {"material": "aluminium", "v_drop_max_pct": 2.0}
+    }
+  },
+
+  "transformers": {
+    "_note": "Step-up MV trafo (inverter LV -> toplama MV). kva_ratings = IEC standart kademeler. Kayiplar nominal guc yuzdesi (oil-immersed, solar duty).",
+    "kva_ratings": [800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000],
+    "loss_no_load_pct": 0.11,
+    "loss_load_pct": 1.0,
+    "impedance_pct": 6.0,
+    "load_factor": 0.85
+  },
+
+  "defaults": {
+    "dc_ac_ratio": {"fixed": 1.25, "single_axis": 1.30, "dual_axis": 1.30},
+    "mv_kv": 34.5,
+    "design_temp_min_c": -10.0,
+    "design_temp_max_cell_c": 70.0,
+    "v_drop_total_max_pct": 3.0,
+    "grid_voltage_rise_max_pct": 5.0,
+    "grid_sc_ratio_min": 5.0,
+    "grid_strength_mva": [[110, 5000.0], [33, 1000.0], [1, 350.0]],
+    "mv_line_x_ohm_per_km": 0.10,
+    "mv_line_c_nf_per_km": 200.0
+  },
+
+  "protection": {
+    "dc_string_fuse_factor": 1.25,
+    "ac_breaker_factor": 1.25,
+    "dc_fuse_std_a": [15, 20, 25, 30, 32, 40, 50],
+    "mv_relays": ["50/51 asiri akim", "27/59 dusuk/asiri gerilim", "81 frekans", "32 ters guc"]
+  },
+
+  "capex": {
+    "_note": "Tarama-seviyesi birim maliyetler (USD, ~2024-2025 utility-scale). Ekipman-bazli; arazi/EPC genel gideri financial.py'de.",
+    "inverter_usd_per_kva": 40.0,
+    "transformer_usd_per_kva": 15.0,
+    "cable_usd_per_mm2_m": {"copper": 0.020, "aluminium": 0.012}
+  }
+}

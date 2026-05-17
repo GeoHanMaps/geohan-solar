@@ -25,6 +25,9 @@ rasterstats>=0.19.0
 # Solar modelling
 pvlib>=0.11.0
 
+# Şebeke yük-akışı / kısa-devre (Faz 4.3 EPC bağlanabilirlik)
+pandapower>=2.14.0
+
 
 # Optimizasyon (MCDA ağırlık kalibrasyonu)
 scipy>=1.13.0

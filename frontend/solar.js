@@ -670,6 +670,8 @@ function removeLayoutLayers() {
   if (!_b.disabled) _b.textContent = '⚡ Santral Simülasyonu';
   document.getElementById('layout-legend').style.display = 'none';
   document.getElementById('layout-section').style.display = 'none';
+  document.getElementById('lyt-elec').style.display = 'none';
+  document.getElementById('lyt-sld').innerHTML = '';
 }
 
 // Buton durumu: 'hidden' (poligon yok) | 'locked' (poligon var, ısı haritası yok)
@@ -709,7 +711,7 @@ async function toggleLayout() {
       return;
     }
     const data = await r.json();
-    addLayoutLayers(data.geojson, data.summary);
+    addLayoutLayers(data.geojson, data.summary, data.single_line_svg);
     layoutVisible = true;
     btn.classList.add('active');
     btn.textContent = '⚡ Simülasyonu Gizle';
@@ -721,7 +723,7 @@ async function toggleLayout() {
   btn.disabled = false;
 }
 
-function addLayoutLayers(geojson, summary) {
+function addLayoutLayers(geojson, summary, singleLineSvg) {
   removeLayoutLayers();
   map.addSource('lyt-src', { type: 'geojson', data: geojson });
 
@@ -803,6 +805,32 @@ function addLayoutLayers(geojson, summary) {
     document.getElementById('lyt-km').textContent    = summary.interconnect_km.toFixed(1) + ' km' + syn;
     const subKv = summary.target_substation_kv;
     document.getElementById('lyt-sub-kv').textContent = subKv ? subKv + ' kV' : 'bilinmiyor';
+
+    const e = summary.electrical;
+    const elBox = document.getElementById('lyt-elec');
+    if (e) {
+      const T = (id, v) => { document.getElementById(id).textContent = v; };
+      T('le-netac', e.net_ac_mw.toFixed(1) + ' MW');
+      T('le-dcac',  e.dc_ac_ratio.toFixed(2));
+      T('le-clip',  e.clipping_loss_pct + ' %');
+      T('le-loss',  e.total_electrical_loss_pct + ' %');
+      T('le-inv',   e.n_inverters + ' × ' + e.inverter_model);
+      T('le-str',   e.modules_per_string + ' / ' + e.n_strings.toLocaleString());
+      T('le-tx',    e.n_transformers + ' × ' + e.transformer_kva + ' kVA');
+      T('le-cab',   e.dc_string_cable_mm2 + ' / ' + e.ac_lv_cable_mm2 + ' / ' + e.mv_cable_mm2 + ' mm²');
+      T('le-prot',  (e.dc_string_fuse_a ?? '–') + ' A / ' + (e.ac_breaker_a ?? '–') + ' A');
+      T('le-capex', '$' + Math.round(e.equipment_capex_usd).toLocaleString());
+      T('le-vrise', e.grid_voltage_rise_pct != null ? e.grid_voltage_rise_pct + ' %' : '—');
+      T('le-scmva', e.grid_short_circuit_mva != null ? e.grid_short_circuit_mva + ' MVA' : '—');
+      const feas = e.grid_feasible;
+      const fEl = document.getElementById('le-feas');
+      fEl.textContent = feas == null ? 'belirsiz' : feas ? '✔ UYGUN' : '✕ UYGUN DEĞİL';
+      fEl.style.color = feas == null ? '' : feas ? '#3fbf6f' : '#e06363';
+      document.getElementById('lyt-sld').innerHTML = singleLineSvg || '';
+      elBox.style.display = 'block';
+    } else {
+      elBox.style.display = 'none';
+    }
   }
 }
 

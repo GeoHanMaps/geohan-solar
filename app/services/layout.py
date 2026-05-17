@@ -25,6 +25,7 @@ from pyproj import Transformer
 
 from app.schemas import PanelTech, TrackingType
 from app.services import capacity as cap_svc
+from app.services import electrical as elec_svc
 from app.services.grid import _reliability_to_km
 
 # ── Modül sabitleri ────────────────────────────────────────────────────────────
@@ -307,12 +308,17 @@ def _osm_context(
     poc_utm = _nearest_boundary_vertex(setback_utm, target_sub_utm)
 
     if poc_utm is not None:
-        route_len = math.hypot(poc_utm.x - target_sub_utm.x, poc_utm.y - target_sub_utm.y)
-        interconnect_km = route_len / 1000.0
+        # Mühendislik güzergâhı: diyagonal değil, kardinal koridor (L-route) —
+        # POC → dirsek (hedef X, POC Y) → hedef. Manhattan uzunluk gerçek
+        # kablo serim koridoruna (yol/parsel kenarı) daha yakın.
+        dx = abs(poc_utm.x - target_sub_utm.x)
+        dy = abs(poc_utm.y - target_sub_utm.y)
+        interconnect_km = (dx + dy) / 1000.0
         interconnect_capex_usd = interconnect_km * USD_PER_KM_LINE
 
         poc_lon, poc_lat = from_utm.transform(poc_utm.x, poc_utm.y)
         plant_sub_wgs84 = Point(poc_lon, poc_lat)
+        bend_lon, bend_lat = from_utm.transform(target_sub_utm.x, poc_utm.y)
         tgt_lon, tgt_lat = from_utm.transform(target_sub_utm.x, target_sub_utm.y)
 
         features.append({
@@ -321,6 +327,7 @@ def _osm_context(
                 "type": "LineString",
                 "coordinates": [
                     [round(poc_lon, 6), round(poc_lat, 6)],
+                    [round(bend_lon, 6), round(bend_lat, 6)],
                     [round(tgt_lon, 6), round(tgt_lat, 6)],
                 ],
             },
@@ -398,6 +405,9 @@ def _compute(
     country_code: str,
     panel_tech: str,
     tracking: str,
+    panel_model: Optional[str] = None,
+    inverter_model: Optional[str] = None,
+    cable_spec: Optional[str] = None,
 ) -> dict:
     """Deterministik layout hesapla (ağ çağrıları graceful degrade)."""
 
@@ -469,8 +479,27 @@ def _compute(
     )
     dc_mw = cap["total_mw"]
     gcr_effective = cap["gcr_effective"]
-    ac_mw = dc_mw / DC_AC_RATIO
-    n_tx = max(1, math.ceil(ac_mw / MW_PER_TRANSFORMER))
+
+    # Elektriksel çekirdek (deterministik, ağ yok) — graceful degrade
+    elec: Optional[dict] = None
+    try:
+        elec = elec_svc.compute(
+            dc_mw=dc_mw,
+            tracking=tracking,
+            panel_model=panel_model,
+            inverter_model=inverter_model,
+            cable_spec=cable_spec,
+        )
+    except Exception:
+        elec = None
+
+    if elec is not None:
+        dc_ac = elec["dc_ac_ratio"] or DC_AC_RATIO
+        ac_mw = dc_mw / dc_ac                 # nameplate AC (net → elec.net_ac_mw)
+        n_tx = elec["n_transformers"]
+    else:
+        ac_mw = dc_mw / DC_AC_RATIO
+        n_tx = max(1, math.ceil(ac_mw / MW_PER_TRANSFORMER))
 
     # 6. Panel blokları + iç yollar
     blocks_utm, roads_utm = _make_blocks(setback_utm)
@@ -508,6 +537,18 @@ def _compute(
 
     features.extend(osm_feats)
 
+    # Faz 4.3: pandapower POC bağlanabilirlik (target_kv + interconnect biliniyor)
+    if elec is not None:
+        try:
+            elec.update(elec_svc.grid_check(
+                net_ac_mw=elec["net_ac_mw"],
+                target_kv=target_kv,
+                interconnect_km=interconnect_km,
+                mv_mm2=elec["mv_cable_mm2"],
+            ))
+        except Exception:
+            pass
+
     if plant_sub_wgs84 is not None:
         features.append({
             "type": "Feature",
@@ -527,6 +568,7 @@ def _compute(
         "target_substation_kv": target_kv,
         "slope_assumed": True,
         "synthetic_grid": synthetic_grid,
+        "electrical": elec,
     }
 
     return {
@@ -542,6 +584,9 @@ def generate(
     country_code: str = "DEFAULT",
     panel_tech: str = "mono",
     tracking: str = "fixed",
+    panel_model: Optional[str] = None,
+    inverter_model: Optional[str] = None,
+    cable_spec: Optional[str] = None,
 ) -> dict:
     """
     Lazy disk-cached layout üret.
@@ -558,7 +603,8 @@ def generate(
             "geojson": json.loads(geojson_path.read_text(encoding="utf-8")),
         }
 
-    result = _compute(tiff_path, country_code, panel_tech, tracking)
+    result = _compute(tiff_path, country_code, panel_tech, tracking,
+                      panel_model, inverter_model, cable_spec)
 
     base.mkdir(parents=True, exist_ok=True)
     geojson_path.write_text(json.dumps(result["geojson"]), encoding="utf-8")

@@ -136,13 +136,14 @@ def test_n_transformers_formula(tiff_path, no_osm):
 
 
 def test_interconnect_route_geometry(tiff_path, no_osm):
-    """interconnect_route: 2 uçlu LineString, km > 0, synthetic=True."""
+    """interconnect_route: 3 noktalı L-route (POC→dirsek→hedef), km>0, synthetic."""
     result = _run(tiff_path)
     layers = _layers(result)
     assert "interconnect_route" in layers, "interconnect_route feature yok"
     feat = layers["interconnect_route"][0]
     coords = feat["geometry"]["coordinates"]
-    assert len(coords) == 2, "LineString'in tam 2 ucu olmalı"
+    assert len(coords) == 3, "Mühendislik güzergâhı L-route → 3 nokta"
+    assert coords[0] != coords[-1], "POC ile hedef farklı olmalı"
     props = feat["properties"]
     assert props["km"] > 0
     assert props["synthetic"] is True  # OSM yok → sentetik

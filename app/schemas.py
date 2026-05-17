@@ -159,6 +159,12 @@ class MapRequest(BaseModel):
     tracking:     TrackingType    = TrackingType.fixed
     country_code: str             = Field("DEFAULT", max_length=2)
     name:         Optional[str]   = Field(None, max_length=120)
+    panel_model:    Optional[str] = Field(None, max_length=64,
+                        description="config/equipment.json panels.library anahtarı (None → kütüphane default)")
+    inverter_model: Optional[str] = Field(None, max_length=64,
+                        description="config/equipment.json inverters.library anahtarı (None → kütüphane default)")
+    cable_spec:     Optional[str] = Field(None, max_length=64,
+                        description="Kablo profili override (None → equipment.json cables.segments default)")
 
     @model_validator(mode="after")
     def geom_type_check(self):
@@ -280,6 +286,37 @@ class CreditHistoryResponse(BaseModel):
 
 # ─── Faz 2: GES Simülasyon Katmanı ──────────────────────────────────────────
 
+class ElectricalSummary(BaseModel):
+    """Faz 4.2 elektriksel çekirdek çıktısı; grid_* alanları Faz 4.3 yük-akışından."""
+    panel_model:               str
+    inverter_model:            str
+    inverter_type:             str
+    n_modules:                 int
+    modules_per_string:        int
+    n_strings:                 int
+    n_inverters:               int
+    dc_ac_ratio:               float
+    clipping_loss_pct:         float
+    dc_cable_loss_pct:         float
+    ac_cable_loss_pct:         float
+    mv_cable_loss_pct:         float
+    transformer_loss_pct:      float
+    total_electrical_loss_pct: float
+    net_ac_mw:                 float
+    transformer_kva:           float
+    n_transformers:            int
+    dc_string_cable_mm2:       float
+    ac_lv_cable_mm2:           float
+    mv_cable_mm2:              float
+    equipment_capex_usd:       float
+    dc_string_fuse_a:          Optional[float] = None
+    ac_breaker_a:              Optional[float] = None
+    mv_relays:                 Optional[list[str]] = None
+    grid_voltage_rise_pct:     Optional[float] = None
+    grid_short_circuit_mva:    Optional[float] = None
+    grid_feasible:             Optional[bool]  = None
+
+
 class LayoutSummary(BaseModel):
     dc_mw: float
     ac_mw: float
@@ -292,8 +329,10 @@ class LayoutSummary(BaseModel):
     target_substation_kv: Optional[float] = None
     slope_assumed: bool = False
     synthetic_grid: bool = False
+    electrical: Optional[ElectricalSummary] = None
 
 
 class LayoutResponse(BaseModel):
     summary: LayoutSummary
     geojson: dict
+    single_line_svg: Optional[str] = None
