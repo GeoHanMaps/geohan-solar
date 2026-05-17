@@ -1,6 +1,20 @@
 import pytest
 from app.services import legal
 
+# WDPA/askeri bölge sorgusunu (OSM Overpass) tüm birim testlerde devre dışı bırak.
+# Temiz site sonucu döndürülür; test niyeti LC/eğim kuralları üzerine.
+_CLEAN_GEO = {
+    "wdpa": None, "military": None,
+    "wdpa_checked": True, "military_checked": True,
+    "constraints": [],
+}
+
+
+@pytest.fixture(autouse=True)
+def _no_osm(monkeypatch):
+    monkeypatch.setattr("app.services.legal.geo_constraints",
+                        lambda *a, **kw: _CLEAN_GEO)
+
 
 class TestGlobalHardBlocks:
     @pytest.mark.parametrize("lc_code", [70, 80, 90, 95])
@@ -75,9 +89,11 @@ class TestCleanSite:
         assert result["score"] == 100
         assert result["country_code"] == "XX"
 
-    def test_wdpa_not_checked(self):
+    def test_wdpa_checked_clean_site(self):
+        """Temiz site → WDPA kontrolü yapılmış, kısıt yok, score=100."""
         result = legal.check(37.0, 32.0, lc_code=60, slope_pct=5.0)
-        assert result["wdpa_checked"] is False
+        assert result["wdpa_checked"] is True
+        assert result["score"] == 100
 
 
 class TestAvailableCountries:

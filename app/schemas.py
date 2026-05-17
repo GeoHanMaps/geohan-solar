@@ -102,10 +102,14 @@ class FinancialResult(BaseModel):
 
 
 class LegalDetail(BaseModel):
-    score:        int
-    hard_block:   bool
-    reason:       str
-    wdpa_checked: bool
+    score:             int
+    hard_block:        bool
+    reason:            str
+    wdpa_checked:      bool
+    military_checked:  bool = False
+    wdpa_name:         Optional[str] = None
+    wdpa_iucn:         Optional[str] = None
+    constraints:       list = []
 
 
 class AnalysisResult(BaseModel):

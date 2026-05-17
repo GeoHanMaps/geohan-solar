@@ -40,21 +40,25 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
     store.set_running(job_id)
     try:
         # Faz 1 — paralel: tüm harici I/O çağrıları aynı anda başlar
-        with ThreadPoolExecutor(max_workers=4) as ex:
+        # geo_constraints (WDPA) lat/lon bazlı, terrain'den bağımsız → paralel eklendi
+        with ThreadPoolExecutor(max_workers=5) as ex:
             ft = ex.submit(_terrain_and_horizon, req.lat, req.lon)
             fs = ex.submit(solar.get_solar_stats, req.lat, req.lon)
             fg = ex.submit(grid.nearest_substation_km, req.lat, req.lon, req.country_code)
             fa = ex.submit(access.nearest_road_km, req.lat, req.lon)
+            fw = ex.submit(legal.geo_constraints, req.lat, req.lon, req.country_code)
 
             t, hp   = ft.result()
             sol     = fs.result()
             ghi_raw = sol["p50"]
             gkm     = fg.result()
             rkm     = fa.result()
+            geo_res = fw.result()
 
-        # Faz 2 — yerel (ağ yok): terrain sonucu hazır olduktan sonra
+        # Faz 2 — yerel (ağ yok): geo_result önceden hazır
         leg  = legal.check(req.lat, req.lon, t["lc_code"],
-                           t["slope_mean_pct"], req.country_code)
+                           t["slope_mean_pct"], req.country_code,
+                           geo_result=geo_res)
         corr = downscale.terrain_correction(
                    req.lat, req.lon, t["slope_mean_deg"], t["aspect_deg"],
                    horizon_profile=hp)
@@ -113,19 +117,23 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
 def _analyse_one(loc, req: BatchRequest) -> dict | None:
     """Tek lokasyon — hata varsa None döner."""
     try:
-        with ThreadPoolExecutor(max_workers=4) as ex:
+        with ThreadPoolExecutor(max_workers=5) as ex:
             ft = ex.submit(_terrain_and_horizon, loc.lat, loc.lon)
-            fs = ex.submit(solar.get_annual_ghi, loc.lat, loc.lon)
+            fs = ex.submit(solar.get_solar_stats, loc.lat, loc.lon)
             fg = ex.submit(grid.nearest_substation_km, loc.lat, loc.lon, req.country_code)
             fa = ex.submit(access.nearest_road_km, loc.lat, loc.lon)
+            fw = ex.submit(legal.geo_constraints, loc.lat, loc.lon, req.country_code)
 
             t, hp   = ft.result()
-            ghi_raw = fs.result()
+            sol     = fs.result()
+            ghi_raw = sol["p50"]
             gkm     = fg.result()
             rkm     = fa.result()
+            geo_res = fw.result()
 
         leg = legal.check(loc.lat, loc.lon, t["lc_code"],
-                          t["slope_mean_pct"], req.country_code)
+                          t["slope_mean_pct"], req.country_code,
+                          geo_result=geo_res)
         corr = downscale.terrain_correction(
                    loc.lat, loc.lon, t["slope_mean_deg"], t["aspect_deg"],
                    horizon_profile=hp)

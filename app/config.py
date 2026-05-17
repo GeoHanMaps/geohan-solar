@@ -84,6 +84,12 @@ class Settings(BaseSettings):
     rate_limit_analyses: str = "10/minute"
     rate_limit_default: str = "60/minute"
 
+    # WDPA / Yasal coğrafi kısıt
+    cache_ttl_wdpa_days: float = 30.0
+    wdpa_search_radius_m: int = 30_000   # OSM Overpass arama yarıçapı (m)
+    wdpa_buffer_km: float = 1.0          # Korunan alan yakınlık buffer (km) → soft block
+    protected_planet_token: str = ""     # Protected Planet API v3 token; boşsa API atlanır
+
     # Heatmap COG depolama dizini
     maps_data_dir: str = "data/maps"
     # Heatmap raster/constraint dosyaları bu kadar gün sonra silinir.
