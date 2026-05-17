@@ -767,6 +767,8 @@ function addLayoutLayers(geojson, summary) {
     document.getElementById('lyt-ac-mw').textContent = summary.ac_mw.toFixed(1) + ' MW';
     document.getElementById('lyt-n-tx').textContent  = summary.n_transformers;
     document.getElementById('lyt-km').textContent    = summary.interconnect_km.toFixed(1) + ' km' + syn;
+    const subKv = summary.target_substation_kv;
+    document.getElementById('lyt-sub-kv').textContent = subKv ? subKv + ' kV' : 'bilinmiyor';
   }
 }
 
