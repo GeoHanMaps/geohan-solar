@@ -1,3 +1,4 @@
+import datetime
 import pytest
 from unittest.mock import patch, MagicMock
 from app.services import solar, cache
@@ -18,8 +19,17 @@ PVGIS_RESP = {
     ]}}
 }
 
+# OPEN_METEO_RESP: _stats_from_open_meteo 'time' alanını kullanır → 2013 tarihleri eklendi.
+# _from_open_meteo (tek yıl, eski) 'time' kullanmaz → backward compat OK.
+_DATES_2013 = [
+    (datetime.date(2013, 1, 1) + datetime.timedelta(days=i)).isoformat()
+    for i in range(365)
+]
 OPEN_METEO_RESP = {
-    "daily": {"shortwave_radiation_sum": [18.0] * 365}   # 18 MJ/m²/gün × 365
+    "daily": {
+        "time": _DATES_2013,
+        "shortwave_radiation_sum": [18.0] * 365,   # 18 MJ/m²/gün
+    }
 }
 
 NSRDB_RESP = {
@@ -207,3 +217,122 @@ class TestSourceInfo:
         info = solar.source_info(40.7, -74.0)
         assert info["region"] == "americas"
         assert "nsrdb" in info["pipeline"]
+
+
+# ─── TMY / P50-P90 ───────────────────────────────────────────────────────────────
+
+class TestSolarStats:
+    def test_p50_p90_empirical(self):
+        values = [1800, 1850, 1900, 1900, 1950, 2000, 2050, 2100, 2150, 2200]
+        p50, p90 = solar._p50_p90(values)
+        assert p50 == pytest.approx(1975.0)   # medyan 10 değer: (1950+2000)/2
+        assert p90 < p50                       # P90 < P50 — kötü yıllar
+
+    def test_p50_p90_single_value(self):
+        p50, p90 = solar._p50_p90([1900.0])
+        assert p50 == 1900.0
+        assert p90 == pytest.approx(solar._cv_p90(1900.0))
+
+    def test_cv_p90_formula(self):
+        mean = 2000.0
+        p90  = solar._cv_p90(mean)
+        assert p90 == pytest.approx(2000.0 * (1 - 1.282 * 0.07))
+        assert p90 < mean
+
+    def test_parse_cams_csv_semicolon(self, tmp_path):
+        """CAMS ';' ayraçlı CSV — GHI sütunu doğru okunur."""
+        csv_content = (
+            "# Comment line\n"
+            "Observation period;TOA;Clear sky GHI;Clear sky BHI;Clear sky DHI;Clear sky BNI;"
+            "GHI;BHI;DHI;BNI;Reliability\n"
+            "2019-01-01/2019-01-01;10000;500;300;200;350;450;280;170;310;1.0\n"
+            "2019-01-02/2019-01-02;10000;510;310;200;360;460;290;170;320;1.0\n"
+        )
+        f = tmp_path / "cams.csv"
+        f.write_text(csv_content, encoding="utf-8")
+        annual = solar._parse_cams_csv(str(f))
+        assert 2019 in annual
+        assert annual[2019] == pytest.approx((450 + 460) / 1000)
+
+    def test_parse_cams_csv_skips_negative_sentinel(self, tmp_path):
+        """Negatif CAMS missing-data sentinel'leri (-999, -1) atlanır."""
+        csv_content = (
+            "Observation period;GHI\n"
+            "2019-01-01/2019-01-01;500\n"
+            "2019-01-02/2019-01-02;-999\n"
+            "2019-01-03/2019-01-03;600\n"
+        )
+        f = tmp_path / "cams.csv"
+        f.write_text(csv_content, encoding="utf-8")
+        annual = solar._parse_cams_csv(str(f))
+        assert annual[2019] == pytest.approx((500 + 600) / 1000)
+
+    def test_parse_cams_csv_multi_year(self, tmp_path):
+        """Farklı yıllar ayrı gruplara düşer."""
+        csv_content = (
+            "Observation period;GHI\n"
+            "2020-06-01/2020-06-01;1000\n"
+            "2021-06-01/2021-06-01;1200\n"
+        )
+        f = tmp_path / "cams.csv"
+        f.write_text(csv_content, encoding="utf-8")
+        annual = solar._parse_cams_csv(str(f))
+        assert len(annual) == 2
+        assert annual[2020] == pytest.approx(1.0)
+        assert annual[2021] == pytest.approx(1.2)
+
+    def test_stats_pvgis_returns_solar_stats_fields(self):
+        with patch("app.services.solar.requests.get", return_value=_ok(PVGIS_RESP)):
+            stats = solar._stats_from_pvgis(37.87, 32.49)
+        assert stats["p50"] > 0
+        assert stats["p90"] < stats["p50"]
+        assert stats["source"] == "pvgis"
+        assert stats["p90_method"] == "cv_estimate"
+        assert stats["years_used"] == 16
+
+    def test_stats_open_meteo_single_year_cv(self):
+        """1 yıl → CV tahmini (< 5 eşik)."""
+        with patch("app.services.solar.requests.get", return_value=_ok(OPEN_METEO_RESP)):
+            stats = solar._stats_from_open_meteo(0.0, 10.0)
+        assert stats["years_used"] == 1
+        assert stats["p90_method"] == "cv_estimate"
+        assert stats["p50"] > 0
+        assert stats["p90"] < stats["p50"]
+
+    def test_stats_open_meteo_multi_year_empirical(self):
+        """10 yıllık veri → gerçek empirical P50/P90."""
+        dates, values = [], []
+        for y in range(2013, 2023):
+            for d in range(365):
+                dates.append(
+                    (datetime.date(y, 1, 1) + datetime.timedelta(days=d)).isoformat()
+                )
+                values.append(18.0 + (y - 2013) * 0.2)   # yıllar arası küçük fark
+        resp = {"daily": {"time": dates, "shortwave_radiation_sum": values}}
+        with patch("app.services.solar.requests.get", return_value=_ok(resp)):
+            stats = solar._stats_from_open_meteo(0.0, 20.0)
+        assert stats["years_used"] == 10
+        assert stats["p90_method"] == "empirical"
+        assert stats["p50"] > 0
+        assert stats["p90"] < stats["p50"]
+        assert stats["source"] == "open_meteo"
+
+    def test_get_solar_stats_returns_all_keys(self, monkeypatch):
+        monkeypatch.setattr("app.services.solar.settings.cams_key", "")
+        monkeypatch.setattr("app.services.solar.settings.nsrdb_key", "")
+        with patch("app.services.solar.requests.get", return_value=_ok(PVGIS_RESP)):
+            stats = solar.get_solar_stats(37.87, 32.49)
+        for key in ("p50", "p90", "p90_method", "source", "years_used"):
+            assert key in stats
+        assert stats["p50"] > stats["p90"] > 0
+
+    def test_get_annual_ghi_equals_p50_via_cache(self, monkeypatch):
+        """get_annual_ghi() → get_solar_stats()["p50"] — cache hit'ten döner."""
+        monkeypatch.setattr("app.services.solar.settings.cams_key", "")
+        monkeypatch.setattr("app.services.solar.settings.nsrdb_key", "")
+        with patch("app.services.solar.requests.get",
+                   return_value=_ok(PVGIS_RESP)) as mock_get:
+            stats = solar.get_solar_stats(2.0, 2.0)
+            ghi   = solar.get_annual_ghi(2.0, 2.0)   # cache hit — HTTP çağrısı yok
+        assert ghi == stats["p50"]
+        assert mock_get.call_count == 1   # sadece get_solar_stats çağırdı

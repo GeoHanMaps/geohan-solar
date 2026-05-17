@@ -42,12 +42,13 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
         # Faz 1 — paralel: tüm harici I/O çağrıları aynı anda başlar
         with ThreadPoolExecutor(max_workers=4) as ex:
             ft = ex.submit(_terrain_and_horizon, req.lat, req.lon)
-            fs = ex.submit(solar.get_annual_ghi, req.lat, req.lon)
+            fs = ex.submit(solar.get_solar_stats, req.lat, req.lon)
             fg = ex.submit(grid.nearest_substation_km, req.lat, req.lon, req.country_code)
             fa = ex.submit(access.nearest_road_km, req.lat, req.lon)
 
-            t, hp = ft.result()
-            ghi_raw = fs.result()
+            t, hp   = ft.result()
+            sol     = fs.result()
+            ghi_raw = sol["p50"]
             gkm     = fg.result()
             rkm     = fa.result()
 
@@ -75,6 +76,8 @@ def analyse_task(self, job_id: str, req_data: dict) -> None:
             total_score=res["total"],
             irr_estimate=fin["irr_estimate"],
             hard_block=res.get("hard_block", False),
+            ghi_p50=ghi_raw,
+            ghi_p90=sol["p90"],
             legal_detail=LegalDetail(**leg),
             breakdown=ScoreBreakdown(
                 egim=CriterionScore(   value=round(t["slope_mean_pct"], 1), unit="%",          score=s["egim"],   weight=w["egim"]),

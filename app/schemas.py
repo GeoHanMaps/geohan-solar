@@ -117,6 +117,8 @@ class AnalysisResult(BaseModel):
     total_score:  float
     irr_estimate: float = 0.0
     hard_block:   bool = False
+    ghi_p50:      float = 0.0   # TMY P50 yıllık GHI (kWh/m²/yıl)
+    ghi_p90:      float = 0.0   # P90 exceedance — banka finansmanı için
     breakdown:    ScoreBreakdown
     capacity:     CapacityResult
     financial:    FinancialResult

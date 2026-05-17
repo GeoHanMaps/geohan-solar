@@ -33,13 +33,18 @@ GHI     = 1950.0
 GRID_KM = 0.9
 ROAD_KM = 0.4
 
+GHI_STATS = {
+    "p50": GHI, "p90": 1775.0,
+    "p90_method": "cv_estimate", "source": "pvgis", "years_used": 16,
+}
+
 
 @pytest.fixture(scope="module")
 def client():
     with (
         patch("app.services.terrain.analyse",              return_value=TERRAIN_RESULT),
         patch("app.services.terrain.horizon_profile",      return_value={}),
-        patch("app.services.solar.get_annual_ghi",         return_value=GHI),
+        patch("app.services.solar.get_solar_stats",        return_value=GHI_STATS),
         patch("app.services.downscale.terrain_correction", return_value=1.02),
         patch("app.services.grid.nearest_substation_km",   return_value=GRID_KM),
         patch("app.services.access.nearest_road_km",       return_value=ROAD_KM),
