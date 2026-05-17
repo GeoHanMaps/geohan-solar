@@ -34,6 +34,12 @@ with open(_RULES_PATH, encoding="utf-8") as _f:
 # ESA WorldCover — ülkeden bağımsız global hard block
 _GLOBAL_HARD_BLOCK = {70, 80, 90, 95}  # kar/buz, su, sulak alan, mangrov
 
+_LC_LABELS: dict[int, str] = {
+    10: "orman", 20: "makilik/çalılık", 30: "otlak/çayır",
+    40: "tarım", 50: "yapılaşmış", 60: "çıplak arazi",
+    100: "yosun/liken",
+}
+
 # WDPA IUCN kategorileri
 _WDPA_HARD_IUCN = {"Ia", "Ib", "II", "III", "IV"}
 _WDPA_SOFT_IUCN = {"V", "VI", "Not Reported", "Not Applicable"}
@@ -319,9 +325,12 @@ def check(
                        country_code, {})
 
     if lc_code in rules.get("soft_block_lc", []):
-        return _result(40, False,
-                       f"ESA LC {lc_code} — soft block, izin gerekebilir ({country_code})",
-                       country_code, {})
+        label = _LC_LABELS.get(lc_code, f"LC{lc_code}")
+        notes = rules.get("notes", "")
+        reason = f"ESA LC {lc_code} ({label}) — izin gerekebilir ({country_code})"
+        if notes:
+            reason += f". {notes}"
+        return _result(40, False, reason, country_code, {})
 
     # ── WDPA + askeri kontrol ────────────────────────────────────────────
     geo  = geo_result if geo_result is not None else geo_constraints(lat, lon, country_code)
@@ -342,9 +351,16 @@ def check(
                        country_code, geo)
 
     if (wdpa and wdpa["severity"] == "soft") or (mil and mil["severity"] == "soft"):
-        return _result(40, False,
-                       "Korunan alan veya askeri bölge yakınında — izin/ÇED gerekli",
-                       country_code, geo)
+        parts = []
+        if wdpa and wdpa["severity"] == "soft":
+            wname = wdpa.get("name") or "korunan alan"
+            iucn  = wdpa.get("iucn") or "?"
+            parts.append(f"WDPA korunan alan yakınında ('{wname}', IUCN {iucn})")
+        if mil and mil["severity"] == "soft":
+            mt = mil.get("military_type", "askeri")
+            parts.append(f"Askeri bölge yakınında ({mt})")
+        reason = " · ".join(parts) + " — ÇED Yönetmeliği kapsamında çevresel etki değerlendirmesi gerekli"
+        return _result(40, False, reason, country_code, geo)
 
     reason = "Bilinen yasal kısıt yok"
     if not geo.get("wdpa_checked"):
